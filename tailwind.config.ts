@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["Fredoka One", "cursive"],
+        display: ["Poppins", "sans-serif"],
         body: ["Nunito", "sans-serif"],
       },
       colors: {
