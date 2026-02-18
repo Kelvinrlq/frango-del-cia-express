@@ -32,15 +32,15 @@ export default function ProductCard() {
 
       {/* Content */}
       <div className="p-5">
-        <h3 className="font-display text-2xl text-foreground leading-tight">
+        <h3 className="font-display text-3xl font-black text-foreground leading-tight tracking-tight">
           Frango Assado Completo
         </h3>
 
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {["🍗 Frango Inteiro", "🥤 Coca 2L", "🌽 Farofa"].map((tag) => (
             <span
               key={tag}
-              className="text-xs bg-muted text-muted-foreground font-semibold px-2 py-1 rounded-full"
+              className="text-sm bg-muted text-muted-foreground font-bold px-3 py-1.5 rounded-full"
             >
               {tag}
             </span>
@@ -49,9 +49,9 @@ export default function ProductCard() {
 
         <div className="mt-4 flex items-end justify-between">
           <div>
-            <p className="text-muted-foreground text-sm font-semibold">A partir de</p>
-            <p className="font-display text-4xl text-primary">{formatCurrency(50)}</p>
-            <p className="text-xs text-muted-foreground">Pix ou dinheiro</p>
+            <p className="text-muted-foreground text-base font-bold">A partir de</p>
+            <p className="font-display text-5xl font-black text-primary leading-none">{formatCurrency(50)}</p>
+            <p className="text-sm text-muted-foreground font-semibold mt-1">Pix ou dinheiro</p>
           </div>
 
           {/* Qty selector */}
@@ -74,7 +74,7 @@ export default function ProductCard() {
 
         <button
           onClick={handleAdd}
-          className={`mt-4 w-full py-4 rounded-xl font-display text-xl transition-all shadow-button ${
+          className={`mt-4 w-full py-5 rounded-xl font-display text-2xl font-black transition-all shadow-button ${
             added
               ? "bg-green-500 text-white scale-95"
               : "gradient-hero text-secondary hover:opacity-90"
@@ -85,20 +85,20 @@ export default function ProductCard() {
       </div>
 
       {/* Payment info */}
-      <div className="bg-muted px-5 py-3 grid grid-cols-2 gap-2 text-xs font-semibold">
-        <div className="flex items-center gap-1 text-muted-foreground">
+      <div className="bg-muted px-5 py-4 grid grid-cols-2 gap-3 text-sm font-bold">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💳 Débito:</span>
           <span className="text-foreground">{formatCurrency(51)}</span>
         </div>
-        <div className="flex items-center gap-1 text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💳 Crédito:</span>
           <span className="text-foreground">{formatCurrency(52.5)}</span>
         </div>
-        <div className="flex items-center gap-1 text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💰 Dinheiro:</span>
           <span className="text-foreground">{formatCurrency(50)}</span>
         </div>
-        <div className="flex items-center gap-1 text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>📲 Pix:</span>
           <span className="text-foreground">{formatCurrency(50)}</span>
         </div>

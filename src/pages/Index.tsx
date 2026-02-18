@@ -22,15 +22,15 @@ function HomeContent() {
             alt="Casa do Frango Assado da 21"
             className="w-28 h-28 md:w-36 md:h-36 rounded-full shadow-2xl border-4 border-secondary/20"
           />
-          <h1 className="font-display text-4xl md:text-6xl text-secondary leading-tight drop-shadow">
+          <h1 className="font-display text-5xl md:text-7xl font-black text-secondary leading-tight drop-shadow tracking-tight">
             Casa do Frango<br />Assado da 21
           </h1>
-          <p className="text-secondary/80 font-semibold text-lg max-w-sm">
+          <p className="text-secondary/90 font-bold text-xl md:text-2xl max-w-sm leading-relaxed">
             O frango mais gostoso da cidade — assado na hora, direto pra você! 🍗
           </p>
           <div className="flex gap-3 flex-wrap justify-center mt-2">
             {["🚚 Entrega", "🏪 Retirada", "💰 Pix • Dinheiro • Cartão"].map((tag) => (
-              <span key={tag} className="bg-secondary/10 text-secondary font-bold text-sm px-4 py-1.5 rounded-full">
+              <span key={tag} className="bg-secondary/10 text-secondary font-bold text-base md:text-lg px-5 py-2 rounded-full">
                 {tag}
               </span>
             ))}
@@ -41,7 +41,7 @@ function HomeContent() {
       {/* Product */}
       <section className="py-10 px-4">
         <div className="container mx-auto">
-          <h2 className="font-display text-3xl text-foreground text-center mb-6">Nosso Produto</h2>
+          <h2 className="font-display text-4xl font-black text-foreground text-center mb-6 tracking-tight">Nosso Produto</h2>
           <ProductCard />
         </div>
       </section>
@@ -49,7 +49,7 @@ function HomeContent() {
       {/* How it works */}
       <section className="pb-12 px-4">
         <div className="container mx-auto max-w-2xl">
-          <h2 className="font-display text-3xl text-foreground text-center mb-6">Como funciona?</h2>
+          <h2 className="font-display text-4xl font-black text-foreground text-center mb-6 tracking-tight">Como funciona?</h2>
           <div className="grid gap-4">
             {[
               { icon: "🛒", title: "Escolha a quantidade", desc: "Adicione quantos frangos quiser ao seu pedido." },
@@ -60,8 +60,8 @@ function HomeContent() {
               <div key={i} className="bg-card rounded-2xl p-5 flex gap-4 items-start shadow-card">
                 <span className="text-4xl">{step.icon}</span>
                 <div>
-                  <p className="font-display text-xl text-foreground">{step.title}</p>
-                  <p className="text-muted-foreground font-semibold text-sm mt-1">{step.desc}</p>
+                  <p className="font-display text-xl font-bold text-foreground leading-snug">{step.title}</p>
+                  <p className="text-muted-foreground font-semibold text-base mt-1 leading-relaxed">{step.desc}</p>
                 </div>
               </div>
             ))}
@@ -71,8 +71,8 @@ function HomeContent() {
 
       {/* Footer */}
       <footer className="bg-secondary text-primary py-6 text-center">
-        <p className="font-display text-2xl">Casa do Frango Assado da 21</p>
-        <p className="text-primary/70 font-semibold text-sm mt-1">© 2025 — Todos os direitos reservados</p>
+        <p className="font-display text-2xl font-bold">Casa do Frango Assado da 21</p>
+        <p className="text-primary/70 font-semibold text-base mt-1">© 2025 — Todos os direitos reservados</p>
       </footer>
 
       <CartSidebar onCheckout={() => setShowOrder(true)} />
