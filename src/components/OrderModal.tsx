@@ -196,7 +196,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                         : "border-border bg-muted hover:border-primary/40"
                     }`}
                   >
-                    <span className="text-3xl">{t === "delivery" ? "🚚" : "🏪"}</span>
+                    <span className="text-3xl">{t === "delivery" ? "🏍️" : "🏪"}</span>
                     <div>
                       <p className="font-display text-xl text-foreground">
                         {t === "delivery" ? "Entrega" : "Retirada"}
