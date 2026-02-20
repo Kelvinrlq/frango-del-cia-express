@@ -8,7 +8,7 @@ import {
 } from "@/types/order";
 import { X, MapPin, Clock, User, ChevronRight, AlertCircle } from "lucide-react";
 
-const ESTABLISHMENT_PHONE = "5511999999999"; // TODO: substituir pelo número real do estabelecimento
+const ESTABLISHMENT_PHONE = "556793277165";
 
 interface OrderModalProps {
   onClose: () => void;
@@ -251,12 +251,20 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                         <Clock className="w-4 h-4 inline mr-1" />
                         Horário de retirada *
                       </label>
-                      <input
-                        type="time"
+                      <select
                         value={pickupTime}
                         onChange={(e) => setPickupTime(e.target.value)}
                         className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
+                      >
+                        <option value="">Selecione o horário</option>
+                        <option value="08:00">08:00</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00">10:00</option>
+                        <option value="11:00">11:00</option>
+                        <option value="12:00">12:00</option>
+                        <option value="13:00">13:00</option>
+                        <option value="14:00">14:00</option>
+                      </select>
                     </div>
                   </>
                 ) : (
