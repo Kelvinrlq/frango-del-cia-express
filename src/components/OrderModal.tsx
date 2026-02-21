@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useCart } from "@/context/CartContext";
 import {
   PaymentMethod,
@@ -6,7 +6,8 @@ import {
   calcTotal,
   formatCurrency,
 } from "@/types/order";
-import { X, MapPin, Clock, User, ChevronRight, AlertCircle } from "lucide-react";
+import { getDeliveryDistance, calculateDeliveryFee } from "@/services/deliveryService";
+import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
 
 const ESTABLISHMENT_PHONE = "556793277165";
 
@@ -37,14 +38,6 @@ async function fetchCep(cep: string) {
   }
 }
 
-function calcDeliveryFee(_cep: string): number {
-  const lastDigit = parseInt(_cep.replace(/\D/g, "").slice(-1));
-  if (isNaN(lastDigit)) return 5;
-  if (lastDigit <= 3) return 5;
-  if (lastDigit <= 6) return 8;
-  return 12;
-}
-
 export default function OrderModal({ onClose }: OrderModalProps) {
   const { items, clearCart } = useCart();
   const [step, setStep] = useState<Step>("type");
@@ -57,6 +50,9 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [deliveryInfo, setDeliveryInfo] = useState<Partial<DeliveryInfo>>({});
   const [houseNumber, setHouseNumber] = useState("");
   const [complement, setComplement] = useState("");
+  const [distanceLoading, setDistanceLoading] = useState(false);
+  const [outOfRange, setOutOfRange] = useState(false);
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
 
   // Pickup state
   const [pickupName, setPickupName] = useState("");
@@ -76,19 +72,20 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       .slice(0, 9);
     setCep(formatted);
     setCepError("");
+    setOutOfRange(false);
+    setDistanceKm(null);
 
     if (formatted.replace(/\D/g, "").length === 8) {
       setCepLoading(true);
       const data = await fetchCep(formatted);
       setCepLoading(false);
       if (data) {
-        const fee = calcDeliveryFee(formatted);
         setDeliveryInfo({
           cep: formatted,
           street: data.logradouro,
           neighborhood: data.bairro,
           city: data.localidade,
-          deliveryFee: fee,
+          deliveryFee: 0,
         });
       } else {
         setDeliveryInfo({});
@@ -97,6 +94,33 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     }
   };
 
+  const calculateFee = useCallback(async () => {
+    if (!deliveryInfo.street || !houseNumber.trim() || !deliveryInfo.city) return;
+    setDistanceLoading(true);
+    setOutOfRange(false);
+    setCepError("");
+    const result = await getDeliveryDistance(
+      deliveryInfo.street,
+      houseNumber.trim(),
+      deliveryInfo.neighborhood || "",
+      deliveryInfo.city
+    );
+    setDistanceLoading(false);
+    if (result.error) {
+      setCepError(result.error);
+      setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
+      return;
+    }
+    setDistanceKm(result.roundedKm);
+    if (result.fee === null) {
+      setOutOfRange(true);
+      setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
+    } else {
+      setOutOfRange(false);
+      setDeliveryInfo((prev) => ({ ...prev, deliveryFee: result.fee! }));
+    }
+  }, [deliveryInfo.street, deliveryInfo.neighborhood, deliveryInfo.city, houseNumber]);
+
   const canProceedForm = () => {
     if (orderType === "pickup") {
       return pickupName.trim() && pickupTime.trim();
@@ -104,7 +128,10 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     return (
       deliveryInfo.street &&
       houseNumber.trim() &&
-      cep.replace(/\D/g, "").length === 8
+      cep.replace(/\D/g, "").length === 8 &&
+      !outOfRange &&
+      (deliveryInfo.deliveryFee ?? 0) > 0 &&
+      !distanceLoading
     );
   };
 
@@ -294,9 +321,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                         <div className="mt-2 bg-muted rounded-xl p-3 text-sm">
                           <p className="font-semibold text-foreground">{deliveryInfo.street}</p>
                           <p className="text-muted-foreground">{deliveryInfo.neighborhood} — {deliveryInfo.city}</p>
-                          <p className="text-primary font-bold mt-1">
-                            Taxa de entrega: {formatCurrency(deliveryInfo.deliveryFee ?? 0)}
-                          </p>
                         </div>
                       )}
                     </div>
@@ -322,6 +346,47 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                         />
                       </div>
                     </div>
+
+                    {/* Calculate delivery fee button */}
+                    {deliveryInfo.street && houseNumber.trim() && (
+                      <button
+                        onClick={calculateFee}
+                        disabled={distanceLoading}
+                        className="w-full py-3 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {distanceLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Calculando distância...
+                          </>
+                        ) : (
+                          "📍 Calcular Taxa de Entrega"
+                        )}
+                      </button>
+                    )}
+
+                    {/* Fee result */}
+                    {(deliveryInfo.deliveryFee ?? 0) > 0 && distanceKm !== null && (
+                      <div className="bg-muted border border-primary/30 rounded-xl p-3 text-sm">
+                        <p className="text-muted-foreground">Distância: {distanceKm} km</p>
+                        <p className="text-primary font-bold text-lg mt-1">
+                          🛵 Taxa de entrega: {formatCurrency(deliveryInfo.deliveryFee ?? 0)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Out of range */}
+                    {outOfRange && (
+                      <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm">
+                        <p className="text-destructive font-bold flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          Fora da área de cobertura
+                        </p>
+                        <p className="text-muted-foreground mt-1">
+                          Distância fora da área de cobertura padrão, favor consultar valor no WhatsApp.
+                        </p>
+                      </div>
+                    )}
                   </>
                 )}
 
