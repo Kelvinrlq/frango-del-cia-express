@@ -85,6 +85,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           street: data.logradouro,
           neighborhood: data.bairro,
           city: data.localidade,
+          state: data.uf || "MS",
           deliveryFee: 0,
         });
       } else {
@@ -103,7 +104,9 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       deliveryInfo.street,
       houseNumber.trim(),
       deliveryInfo.neighborhood || "",
-      deliveryInfo.city
+      deliveryInfo.city,
+      deliveryInfo.state || "MS",
+      cep.replace(/\D/g, "")
     );
     setDistanceLoading(false);
     if (result.error) {
@@ -119,7 +122,14 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       setOutOfRange(false);
       setDeliveryInfo((prev) => ({ ...prev, deliveryFee: result.fee! }));
     }
-  }, [deliveryInfo.street, deliveryInfo.neighborhood, deliveryInfo.city, houseNumber]);
+  }, [deliveryInfo.street, deliveryInfo.neighborhood, deliveryInfo.city, deliveryInfo.state, houseNumber, cep]);
+
+  const handleHouseNumberChange = (val: string) => {
+    setHouseNumber(val);
+    setOutOfRange(false);
+    setDistanceKm(null);
+    setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
+  };
 
   const canProceedForm = () => {
     if (orderType === "pickup") {
@@ -330,7 +340,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                         <input
                           type="text"
                           value={houseNumber}
-                          onChange={(e) => setHouseNumber(e.target.value)}
+                          onChange={(e) => handleHouseNumberChange(e.target.value)}
                           placeholder="123"
                           className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                         />
