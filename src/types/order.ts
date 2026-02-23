@@ -18,6 +18,7 @@ export interface DeliveryInfo {
   street: string;
   neighborhood: string;
   city: string;
+  state?: string;
   houseNumber: string;
   complement?: string;
   deliveryFee: number;

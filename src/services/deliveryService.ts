@@ -39,13 +39,16 @@ export async function getDeliveryDistance(
   street: string,
   number: string,
   neighborhood: string,
-  city: string
+  city: string,
+  state?: string,
+  zipCode?: string
 ): Promise<DeliveryDistanceResult> {
   const { data, error } = await supabase.functions.invoke("calculate-delivery", {
-    body: { street, number, neighborhood, city },
+    body: { street, number, neighborhood, city, state, zipCode },
   });
 
   if (error) {
+    console.error("Edge function error:", error);
     return { distanceKm: 0, roundedKm: 0, fee: null, error: "Erro ao calcular distância. Tente novamente." };
   }
 
