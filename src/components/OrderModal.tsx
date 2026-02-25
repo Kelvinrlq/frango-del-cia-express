@@ -7,6 +7,7 @@ import {
   formatCurrency,
 } from "@/types/order";
 import { getDeliveryDistance, calculateDeliveryFee } from "@/services/deliveryService";
+import { supabase } from "@/integrations/supabase/client";
 import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
 
 const ESTABLISHMENT_PHONE = "556793277165";
@@ -29,9 +30,10 @@ async function fetchCep(cep: string) {
   const clean = cep.replace(/\D/g, "");
   if (clean.length !== 8) return null;
   try {
-    const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
-    const data = await res.json();
-    if (data.erro) return null;
+    const { data, error } = await supabase.functions.invoke("lookup-cep", {
+      body: { cep: clean },
+    });
+    if (error || !data || data.error) return null;
     return data;
   } catch {
     return null;
