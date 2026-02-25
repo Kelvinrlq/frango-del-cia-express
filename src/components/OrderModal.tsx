@@ -325,7 +325,10 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       <input
                         type="text"
                         value={deliveryName}
-                        onChange={(e) => setDeliveryName(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^a-zA-ZÀ-ÿ\s]/g, "");
+                          setDeliveryName(val);
+                        }}
                         placeholder="Ex: João Silva"
                         maxLength={100}
                         className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
