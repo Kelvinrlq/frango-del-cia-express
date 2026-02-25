@@ -2,3 +2,6 @@ project_id = "tnjdzvajwmtxtsawhkab"
 
 [functions.calculate-delivery]
 verify_jwt = false
+
+[functions.lookup-cep]
+verify_jwt = false
