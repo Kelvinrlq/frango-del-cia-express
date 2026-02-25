@@ -59,6 +59,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   // Pickup state
   const [pickupName, setPickupName] = useState("");
   const [pickupTime, setPickupTime] = useState("");
+  const [deliveryName, setDeliveryName] = useState("");
 
   const [sent, setSent] = useState(false);
   const [cepError, setCepError] = useState("");
@@ -138,6 +139,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       return pickupName.trim() && pickupTime.trim();
     }
     return (
+      deliveryName.trim() &&
       deliveryInfo.street &&
       houseNumber.trim() &&
       cep.replace(/\D/g, "").length === 8 &&
@@ -161,6 +163,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       msg += `⏰ *Horário de retirada:* ${pickupTime}\n`;
     } else {
       msg += `🚚 *Tipo:* ENTREGA\n`;
+      msg += `👤 *Nome:* ${deliveryName}\n`;
       msg += `📍 *Endereço:* ${deliveryInfo.street}, ${houseNumber}${complement ? ` (${complement})` : ""}\n`;
       msg += `🏘️ *Bairro:* ${deliveryInfo.neighborhood} — ${deliveryInfo.city}\n`;
       msg += `📮 *CEP:* ${cep}\n`;
@@ -316,6 +319,20 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   <>
                     <div>
                       <label className="block text-sm font-bold text-foreground mb-1">
+                        <User className="w-4 h-4 inline mr-1" />
+                        Nome de quem vai receber *
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryName}
+                        onChange={(e) => setDeliveryName(e.target.value)}
+                        placeholder="Ex: João Silva"
+                        maxLength={100}
+                        className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-foreground mb-1">
                         <MapPin className="w-4 h-4 inline mr-1" />
                         CEP *
                       </label>
@@ -469,6 +486,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                     </>
                   ) : (
                     <>
+                      <p className="text-sm font-semibold">👤 {deliveryName}</p>
                       <p className="text-sm font-semibold">
                         📍 {deliveryInfo.street}, {houseNumber}{complement ? ` (${complement})` : ""}
                       </p>
