@@ -1,52 +1,30 @@
 
 
-# Diagnóstico: "Fora da área de cobertura" para CEP 79321-864
+# Adicionar campo "Nome" no formulário de entrega
 
-## O que aconteceu
+## Problema
+Quando o cliente escolhe "Entrega", não há campo para digitar o nome. O nome só existe na opção "Retirada" (`pickupName`). O estabelecimento precisa saber quem está a receber a entrega.
 
-Isto **não é um erro de código**. O sistema funcionou corretamente:
+## Alterações
 
-1. CEP 79321-864 foi encontrado pelo ViaCEP: "Rua Agostinho T. Monâco, Nova Corumbá, Corumbá"
-2. A geocodificação retornou coordenadas corretas: lat=-19.044983, lon=-57.646983
-3. A distância calculada foi **5,78 km** (rota real de carro)
-4. A tabela de taxas só cobre até **4 km**, então retornou "Fora da área de cobertura"
+### `src/components/OrderModal.tsx`
 
-O bairro **Nova Corumbá** fica na periferia sul da cidade, a quase 6 km do restaurante (R. Dom Pedro I, 2310). A mensagem exibida é o comportamento esperado.
+1. **Novo estado** — adicionar `deliveryName` (linha ~68, junto aos outros estados de delivery):
+   ```typescript
+   const [deliveryName, setDeliveryName] = useState("");
+   ```
 
-## Solução proposta: Expandir a tabela de taxas
+2. **Input no formulário de entrega** (antes do campo CEP, ~linha 317) — adicionar:
+   ```
+   👤 Nome de quem vai receber *
+   [input text]
+   ```
 
-Para atender endereços mais distantes como Nova Corumbá, a tabela de taxas em `src/services/deliveryService.ts` precisa ser estendida.
+3. **Validação** — em `canProceedForm()` (linha 140), adicionar `deliveryName.trim()` como condição obrigatória para entrega.
 
-### Alteração em `src/services/deliveryService.ts`
+4. **Mensagem WhatsApp** — em `buildWhatsAppMessage()` (linha 163), adicionar `👤 *Nome:* ${deliveryName}` na seção de entrega.
 
-Expandir a `FEE_TABLE` para cobrir distâncias maiores:
+5. **Resumo do pedido** (step "confirm") — mostrar o nome do cliente na seção de entrega, similar ao que já existe para retirada.
 
-```text
-Tabela atual (até 4 km):
-1.0 km → R$ 7,00
-1.5 km → R$ 8,50
-2.0 km → R$ 9,50
-2.5 km → R$ 11,00
-3.0 km → R$ 12,00
-3.5 km → R$ 13,50
-4.0 km → R$ 15,00
-
-Proposta (até 7 km):
-4.5 km → R$ 16,50
-5.0 km → R$ 18,00
-5.5 km → R$ 19,50
-6.0 km → R$ 21,00
-6.5 km → R$ 22,50
-7.0 km → R$ 24,00
-```
-
-### Detalhes técnicos
-
-- Arquivo alterado: `src/services/deliveryService.ts` — adicionar entradas na array `FEE_TABLE` (linhas 7-14)
-- Nenhuma outra alteração necessária — o resto do código já trata `fee === null` como "fora da cobertura"
-- Os valores acima seguem a progressão existente (~R$1,50 por 0,5 km). Pode ajustar conforme necessário
-
-### Pergunta importante
-
-Os valores sugeridos (R$16,50 a R$24,00) para 4,5-7 km estão adequados, ou prefere definir outros valores?
+Nenhum outro arquivo precisa de alteração.
 
