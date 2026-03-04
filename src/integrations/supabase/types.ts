@@ -14,13 +14,123 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          delivery_info: Json | null
+          id: string
+          items: Json
+          notes: string | null
+          order_type: string
+          payment_status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          delivery_info?: Json | null
+          id?: string
+          items: Json
+          notes?: string | null
+          order_type?: string
+          payment_status?: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          delivery_info?: Json | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_type?: string
+          payment_status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          expires_at: string | null
+          id: string
+          mercadopago_payment_id: string | null
+          method: string
+          order_id: string
+          payment_details: Json | null
+          pix_key: string | null
+          qr_code: string | null
+          qr_code_base64: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          mercadopago_payment_id?: string | null
+          method?: string
+          order_id: string
+          payment_details?: Json | null
+          pix_key?: string | null
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          mercadopago_payment_id?: string | null
+          method?: string
+          order_id?: string
+          payment_details?: Json | null
+          pix_key?: string | null
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_payment_by_order: {
+        Args: { order_uuid: string }
+        Returns: {
+          amount: number
+          expires_at: string
+          payment_id: string
+          pix_key: string
+          qr_code_base64: string
+          status: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -7,8 +7,12 @@ import {
   formatCurrency,
 } from "@/types/order";
 import { getDeliveryDistance, calculateDeliveryFee } from "@/services/deliveryService";
+import { createPixPayment } from "@/services/paymentService";
 import { supabase } from "@/integrations/supabase/client";
+import PixPaymentDisplay from "@/components/PixPaymentDisplay";
+import PaymentStatus from "@/components/PaymentStatus";
 import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
+import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
 
@@ -16,7 +20,7 @@ interface OrderModalProps {
   onClose: () => void;
 }
 
-type Step = "type" | "form" | "confirm";
+type Step = "type" | "form" | "confirm" | "pix" | "sent";
 type OrderType = "delivery" | "pickup";
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
@@ -61,8 +65,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pickupTime, setPickupTime] = useState("");
   const [deliveryName, setDeliveryName] = useState("");
 
-  const [sent, setSent] = useState(false);
   const [cepError, setCepError] = useState("");
+
+  // PIX payment state
+  const [pixData, setPixData] = useState<CreatePixPaymentResponse | null>(null);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixError, setPixError] = useState<string | null>(null);
 
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
   const deliveryFee = orderType === "delivery" ? (deliveryInfo.deliveryFee ?? 0) : 0;
@@ -173,14 +181,14 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     msg += `\n💳 *Pagamento:* ${PAYMENT_LABELS[payment]}\n`;
     msg += `💰 *Total: ${formatCurrency(total)}*\n`;
 
-    if (payment === "pix" && orderType === "pickup") {
-      msg += `\n📲 *O cliente irá pagar via PIX antes de buscar.*`;
+    if (payment === "pix") {
+      msg += `\n✅ *Pagamento PIX já confirmado!*`;
     }
 
     return encodeURIComponent(msg);
   };
 
-  const handleSend = () => {
+  const sendWhatsApp = () => {
     const msg = buildWhatsAppMessage();
     window.open(`https://wa.me/${ESTABLISHMENT_PHONE}?text=${msg}`, "_blank");
     if (orderType === "delivery") {
@@ -188,14 +196,80 @@ export default function OrderModal({ onClose }: OrderModalProps) {
         window.open(`https://wa.me/120363423717180111?text=${msg}`, "_blank");
       }, 800);
     }
-    setSent(true);
+  };
+
+  const handleSend = async () => {
+    if (payment === "pix") {
+      // Create PIX payment
+      setPixLoading(true);
+      setPixError(null);
+
+      const customerName = orderType === "pickup" ? pickupName : deliveryName;
+      const { data, error } = await createPixPayment({
+        customer_name: customerName,
+        customer_email: `${customerName.toLowerCase().replace(/\s+/g, ".")}@cliente.com`,
+        customer_phone: "00000000000", // placeholder - public app
+        total_amount: total,
+        items: items.map((i) => ({
+          id: i.id,
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+        order_type: orderType,
+        delivery_info: orderType === "delivery" ? {
+          street: deliveryInfo.street,
+          houseNumber,
+          complement,
+          neighborhood: deliveryInfo.neighborhood,
+          city: deliveryInfo.city,
+          cep,
+          deliveryFee,
+        } : undefined,
+        notes: orderType === "pickup" ? `Retirada às ${pickupTime}` : undefined,
+      });
+
+      setPixLoading(false);
+
+      if (error || !data) {
+        setPixError(error || "Erro ao gerar pagamento PIX");
+        return;
+      }
+
+      setPixData(data);
+      setStep("pix");
+    } else {
+      // Non-PIX: send WhatsApp directly
+      sendWhatsApp();
+      setStep("sent");
+      clearCart();
+    }
+  };
+
+  const handlePixApproved = () => {
+    sendWhatsApp();
+    setStep("sent");
     clearCart();
+  };
+
+  const handlePixExpired = () => {
+    setPixError("O tempo para pagamento expirou. Tente novamente.");
+    setStep("confirm");
+    setPixData(null);
   };
 
   const availablePayments: PaymentMethod[] =
     orderType === "pickup"
       ? ["pix"]
       : ["pix", "dinheiro", "debito", "credito"];
+
+  const stepTitle = () => {
+    if (step === "type") return "Como deseja receber?";
+    if (step === "form") return orderType === "delivery" ? "Endereço de entrega" : "Dados para retirada";
+    if (step === "confirm") return "Resumo do pedido";
+    if (step === "pix") return "Pagamento PIX";
+    return "";
+  };
 
   return (
     <>
@@ -206,9 +280,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           <div className="gradient-hero p-5 flex items-center justify-between shrink-0">
             <div>
               <p className="text-secondary/70 text-sm font-semibold uppercase tracking-wide">
-                {step === "type" && "Como deseja receber?"}
-                {step === "form" && (orderType === "delivery" ? "Endereço de entrega" : "Dados para retirada")}
-                {step === "confirm" && "Resumo do pedido"}
+                {stepTitle()}
               </p>
               <h2 className="font-display text-2xl text-secondary">Finalizar Pedido</h2>
             </div>
@@ -466,7 +538,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
             )}
 
             {/* STEP 3 — Confirm */}
-            {step === "confirm" && !sent && (
+            {step === "confirm" && (
               <div className="space-y-4 animate-fade-in">
                 <div className="bg-muted rounded-xl p-4 space-y-2">
                   <h3 className="font-display text-lg text-foreground">📋 Seus itens</h3>
@@ -509,7 +581,13 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
                 {payment === "pix" && (
                   <div className="bg-muted border border-border rounded-xl p-3 text-sm font-semibold text-foreground">
-                    📲 A chave PIX será enviada após você confirmar o pedido no WhatsApp.
+                    📲 Ao confirmar, será gerado um QR Code PIX para pagamento imediato.
+                  </div>
+                )}
+
+                {pixError && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm text-destructive font-bold">
+                    ⚠️ {pixError}
                   </div>
                 )}
 
@@ -522,16 +600,50 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </button>
                   <button
                     onClick={handleSend}
-                    className="flex-1 gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity"
+                    disabled={pixLoading}
+                    className="flex-1 gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    Enviar Pedido 🍗
+                    {pixLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Gerando PIX...
+                      </>
+                    ) : (
+                      "Enviar Pedido 🍗"
+                    )}
                   </button>
                 </div>
               </div>
             )}
 
+            {/* STEP 4 — PIX Payment */}
+            {step === "pix" && pixData && (
+              <div className="space-y-4 animate-fade-in">
+                <PixPaymentDisplay
+                  qrCodeBase64={pixData.qr_code_base64}
+                  pixKey={pixData.pix_key}
+                  amount={pixData.amount}
+                  expiresAt={pixData.expires_at}
+                />
+
+                <PaymentStatus
+                  mercadopagoPaymentId={pixData.mercadopago_payment_id}
+                  onApproved={handlePixApproved}
+                  onExpired={handlePixExpired}
+                  expiresAt={pixData.expires_at}
+                />
+
+                <button
+                  onClick={() => { setStep("confirm"); setPixData(null); }}
+                  className="w-full py-3 rounded-xl border-2 border-border text-foreground font-bold hover:bg-muted transition-colors"
+                >
+                  ← Cancelar e voltar
+                </button>
+              </div>
+            )}
+
             {/* SENT */}
-            {sent && (
+            {step === "sent" && (
               <div className="text-center py-8 space-y-4 animate-bounce-in">
                 <div className="text-7xl">🎉</div>
                 <h3 className="font-display text-3xl text-foreground">Pedido Enviado!</h3>
@@ -539,9 +651,9 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   Seu pedido foi enviado pelo WhatsApp. Em breve entraremos em contato para confirmar!
                 </p>
                 {payment === "pix" && (
-                  <p className="text-sm bg-muted border border-border rounded-xl p-3 text-foreground font-semibold">
-                    📲 Aguarde a chave PIX pelo WhatsApp para confirmar o pedido.
-                  </p>
+                  <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 text-foreground font-semibold text-sm flex items-center justify-center gap-2">
+                    ✅ Pagamento PIX confirmado com sucesso!
+                  </div>
                 )}
                 <button
                   onClick={onClose}

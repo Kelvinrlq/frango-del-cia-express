@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.lookup-cep]
 verify_jwt = false
+
+[functions.create-pix-payment]
+verify_jwt = false
+
+[functions.check-payment-status]
+verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false
