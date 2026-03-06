@@ -24,12 +24,43 @@ Deno.serve(async (req) => {
     } = await req.json();
 
     // Validate required fields
-    if (!customer_name || !customer_email || !customer_phone || !total_amount || !items) {
+    if (!customer_name || !customer_email || !customer_phone || !total_amount || !items || !Array.isArray(items) || items.length === 0) {
       return new Response(
         JSON.stringify({ error: "Campos obrigatórios faltando" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Server-side price validation — never trust client-submitted total
+    const FRANGO_PRICE = 50;
+    const totalQuantity = items.reduce((sum: number, item: { quantity?: number }) => {
+      const qty = Number(item.quantity);
+      if (!Number.isFinite(qty) || qty <= 0 || qty !== Math.floor(qty)) {
+        return NaN;
+      }
+      return sum + qty;
+    }, 0);
+
+    if (!Number.isFinite(totalQuantity) || totalQuantity <= 0) {
+      return new Response(
+        JSON.stringify({ error: "Itens inválidos" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const deliveryFee = delivery_info?.deliveryFee ? Number(delivery_info.deliveryFee) : 0;
+    const serverTotal = FRANGO_PRICE * totalQuantity + deliveryFee;
+
+    if (Math.abs(serverTotal - Number(total_amount)) > 0.01) {
+      console.error(`Price mismatch: server=${serverTotal}, client=${total_amount}`);
+      return new Response(
+        JSON.stringify({ error: "Valor do pedido inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Use server-computed total for the actual payment
+    const validatedTotal = serverTotal;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -44,7 +75,7 @@ Deno.serve(async (req) => {
         customer_name,
         customer_email,
         customer_phone: customer_phone.replace(/\D/g, ""),
-        total_amount,
+        total_amount: validatedTotal,
         items,
         order_type: order_type || "delivery",
         delivery_info: delivery_info || null,
@@ -66,7 +97,7 @@ Deno.serve(async (req) => {
     const expirationDate = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     const mpPayload = {
-      transaction_amount: Number(total_amount),
+      transaction_amount: validatedTotal,
       description: `Pedido Casa do Frango - ${items.length} item(s)`,
       payment_method_id: "pix",
       payer: {
@@ -108,7 +139,7 @@ Deno.serve(async (req) => {
       .insert({
         order_id: order.id,
         mercadopago_payment_id: String(mpData.id),
-        amount: total_amount,
+        amount: validatedTotal,
         status: "pending",
         method: "pix",
         pix_key: pixData?.qr_code || null,
@@ -132,7 +163,7 @@ Deno.serve(async (req) => {
         qr_code: pixData?.qr_code || null,
         qr_code_base64: pixData?.qr_code_base64 || null,
         pix_key: pixData?.qr_code || null,
-        amount: total_amount,
+        amount: validatedTotal,
         expires_at: expirationDate,
         status: "pending",
       }),
