@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
         customer_name,
         customer_email,
         customer_phone: customer_phone.replace(/\D/g, ""),
-        total_amount,
+        total_amount: validatedTotal,
         items,
         order_type: order_type || "delivery",
         delivery_info: delivery_info || null,
