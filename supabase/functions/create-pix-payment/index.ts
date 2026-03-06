@@ -98,7 +98,6 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Erro ao gerar pagamento PIX" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-      );
     }
 
     const pixData = mpData.point_of_interaction?.transaction_data;
