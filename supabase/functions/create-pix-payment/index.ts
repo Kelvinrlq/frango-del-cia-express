@@ -24,12 +24,43 @@ Deno.serve(async (req) => {
     } = await req.json();
 
     // Validate required fields
-    if (!customer_name || !customer_email || !customer_phone || !total_amount || !items) {
+    if (!customer_name || !customer_email || !customer_phone || !total_amount || !items || !Array.isArray(items) || items.length === 0) {
       return new Response(
         JSON.stringify({ error: "Campos obrigatórios faltando" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Server-side price validation — never trust client-submitted total
+    const FRANGO_PRICE = 50;
+    const totalQuantity = items.reduce((sum: number, item: { quantity?: number }) => {
+      const qty = Number(item.quantity);
+      if (!Number.isFinite(qty) || qty <= 0 || qty !== Math.floor(qty)) {
+        return NaN;
+      }
+      return sum + qty;
+    }, 0);
+
+    if (!Number.isFinite(totalQuantity) || totalQuantity <= 0) {
+      return new Response(
+        JSON.stringify({ error: "Itens inválidos" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const deliveryFee = delivery_info?.deliveryFee ? Number(delivery_info.deliveryFee) : 0;
+    const serverTotal = FRANGO_PRICE * totalQuantity + deliveryFee;
+
+    if (Math.abs(serverTotal - Number(total_amount)) > 0.01) {
+      console.error(`Price mismatch: server=${serverTotal}, client=${total_amount}`);
+      return new Response(
+        JSON.stringify({ error: "Valor do pedido inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Use server-computed total for the actual payment
+    const validatedTotal = serverTotal;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
