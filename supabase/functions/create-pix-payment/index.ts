@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       customer_name,
       customer_email,
       customer_phone,
-      total_amount,
+        total_amount: validatedTotal,
       items,
       order_type,
       delivery_info,
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     const expirationDate = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     const mpPayload = {
-      transaction_amount: Number(total_amount),
+      transaction_amount: validatedTotal,
       description: `Pedido Casa do Frango - ${items.length} item(s)`,
       payment_method_id: "pix",
       payer: {
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
       .insert({
         order_id: order.id,
         mercadopago_payment_id: String(mpData.id),
-        amount: total_amount,
+        amount: validatedTotal,
         status: "pending",
         method: "pix",
         pix_key: pixData?.qr_code || null,
@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
         qr_code: pixData?.qr_code || null,
         qr_code_base64: pixData?.qr_code_base64 || null,
         pix_key: pixData?.qr_code || null,
-        amount: total_amount,
+        amount: validatedTotal,
         expires_at: expirationDate,
         status: "pending",
       }),
