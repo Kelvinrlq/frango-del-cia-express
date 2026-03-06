@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       const errData = await mpResponse.json();
       console.error("MP status check error:", JSON.stringify(errData));
       return new Response(
-        JSON.stringify({ error: "Erro ao consultar pagamento", details: errData }),
+        JSON.stringify({ error: "Erro ao consultar pagamento" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

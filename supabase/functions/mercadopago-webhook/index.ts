@@ -6,6 +6,67 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function verifyWebhookSignature(
+  req: Request,
+  body: Record<string, unknown>
+): Promise<boolean> {
+  const secret = Deno.env.get("MERCADOPAGO_WEBHOOK_SECRET");
+  if (!secret) {
+    console.warn("MERCADOPAGO_WEBHOOK_SECRET not set — skipping signature verification");
+    return true; // Allow through if secret not configured yet
+  }
+
+  const xSignature = req.headers.get("x-signature");
+  const xRequestId = req.headers.get("x-request-id");
+
+  if (!xSignature || !xRequestId) {
+    console.error("Missing x-signature or x-request-id headers");
+    return false;
+  }
+
+  // Parse ts and v1 from x-signature: "ts=...,v1=..."
+  const parts: Record<string, string> = {};
+  for (const part of xSignature.split(",")) {
+    const [key, ...vals] = part.trim().split("=");
+    parts[key] = vals.join("=");
+  }
+
+  const ts = parts["ts"];
+  const v1 = parts["v1"];
+
+  if (!ts || !v1) {
+    console.error("Invalid x-signature format");
+    return false;
+  }
+
+  const dataId = body.data?.id ? String((body.data as Record<string, unknown>).id) : "";
+
+  // Build the manifest string per MP docs
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signatureBytes = await crypto.subtle.sign("HMAC", key, encoder.encode(manifest));
+  const computed = Array.from(new Uint8Array(signatureBytes))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  // Timing-safe comparison
+  if (computed.length !== v1.length) return false;
+  let diff = 0;
+  for (let i = 0; i < computed.length; i++) {
+    diff |= computed.charCodeAt(i) ^ v1.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -14,6 +75,16 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     console.log("Webhook received:", JSON.stringify(body));
+
+    // Verify signature
+    const isValid = await verifyWebhookSignature(req, body);
+    if (!isValid) {
+      console.error("Invalid webhook signature — rejecting request");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Mercado Pago sends action: "payment.created", "payment.updated"
     if (body.type !== "payment" && body.action !== "payment.updated" && body.action !== "payment.created") {
@@ -41,8 +112,8 @@ Deno.serve(async (req) => {
 
     if (!mpResponse.ok) {
       console.error("Failed to fetch MP payment:", mpResponse.status);
-      return new Response(JSON.stringify({ error: "Failed to fetch payment" }), {
-        status: 200, // Always return 200 to MP
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -97,7 +168,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("Webhook error:", err);
     return new Response(JSON.stringify({ received: true }), {
-      status: 200, // Always return 200 to MP
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

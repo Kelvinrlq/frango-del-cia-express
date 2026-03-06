@@ -57,8 +57,9 @@ Deno.serve(async (req) => {
     if (orderError) {
       console.error("Order insert error:", orderError);
       return new Response(
-        JSON.stringify({ error: "Erro ao criar pedido", details: orderError.message }),
+        JSON.stringify({ error: "Erro ao criar pedido" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
       );
     }
 
@@ -93,11 +94,11 @@ Deno.serve(async (req) => {
 
     if (!mpResponse.ok) {
       console.error("MP API error:", JSON.stringify(mpData));
-      // Update order status to failed
       await supabase.from("orders").update({ payment_status: "failed" }).eq("id", order.id);
       return new Response(
-        JSON.stringify({ error: "Erro ao gerar pagamento PIX", details: mpData }),
+        JSON.stringify({ error: "Erro ao gerar pagamento PIX" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
       );
     }
 
