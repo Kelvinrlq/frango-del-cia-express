@@ -60,7 +60,6 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Erro ao criar pedido" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-      );
     }
 
     // 2. Create PIX payment via Mercado Pago
