@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       customer_name,
       customer_email,
       customer_phone,
-        total_amount: validatedTotal,
+      total_amount,
       items,
       order_type,
       delivery_info,
