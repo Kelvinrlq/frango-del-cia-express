@@ -6,6 +6,33 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Fee table — must match client-side deliveryService.ts
+const FEE_TABLE: [number, number][] = [
+  [1.0, 7.0],
+  [1.5, 8.5],
+  [2.0, 9.5],
+  [2.5, 11.0],
+  [3.0, 12.0],
+  [3.5, 13.5],
+  [4.0, 15.0],
+  [4.5, 16.5],
+  [5.0, 18.0],
+  [5.5, 19.5],
+  [6.0, 21.0],
+  [6.5, 22.5],
+  [7.0, 24.0],
+];
+
+function calculateDeliveryFee(distanceKm: number): number | null {
+  const roundedKm = Math.round(distanceKm * 2) / 2;
+  for (const [maxKm, fee] of FEE_TABLE) {
+    if (roundedKm <= maxKm) return fee;
+  }
+  return null;
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -23,10 +50,26 @@ Deno.serve(async (req) => {
       notes,
     } = await req.json();
 
+    // Reject if client tries to send deliveryFee
+    if (delivery_info?.deliveryFee !== undefined) {
+      return new Response(
+        JSON.stringify({ error: "Campo deliveryFee não é aceito. A taxa é calculada pelo servidor." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Validate required fields
     if (!customer_name || !customer_email || !customer_phone || !total_amount || !items || !Array.isArray(items) || items.length === 0) {
       return new Response(
         JSON.stringify({ error: "Campos obrigatórios faltando" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate email format
+    if (!EMAIL_REGEX.test(customer_email)) {
+      return new Response(
+        JSON.stringify({ error: "E-mail inválido" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -48,18 +91,68 @@ Deno.serve(async (req) => {
       );
     }
 
-    const deliveryFee = delivery_info?.deliveryFee ? Number(delivery_info.deliveryFee) : 0;
-    const serverTotal = FRANGO_PRICE * totalQuantity + deliveryFee;
+    // Calculate delivery fee server-side
+    let serverDeliveryFee = 0;
+    if (order_type === "delivery") {
+      if (!delivery_info?.street || !delivery_info?.houseNumber || !delivery_info?.city) {
+        return new Response(
+          JSON.stringify({ error: "Endereço incompleto para entrega" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Call calculate-delivery edge function internally
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+      const calcRes = await fetch(`${supabaseUrl}/functions/v1/calculate-delivery`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          street: delivery_info.street,
+          number: delivery_info.houseNumber,
+          neighborhood: delivery_info.neighborhood || "",
+          city: delivery_info.city,
+          state: delivery_info.state || "MS",
+          zipCode: delivery_info.cep?.replace(/\D/g, "") || "",
+        }),
+      });
+
+      const calcData = await calcRes.json();
+
+      if (!calcRes.ok || calcData.error) {
+        console.error("Delivery calculation failed:", calcData);
+        return new Response(
+          JSON.stringify({ error: calcData.error || "Erro ao calcular taxa de entrega" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const fee = calculateDeliveryFee(calcData.distanceKm);
+      if (fee === null) {
+        return new Response(
+          JSON.stringify({ error: "Endereço fora da área de cobertura" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      serverDeliveryFee = fee;
+      console.log(`Server-calculated delivery fee: R$${fee} (distance: ${calcData.distanceKm}km)`);
+    }
+
+    const serverTotal = FRANGO_PRICE * totalQuantity + serverDeliveryFee;
 
     if (Math.abs(serverTotal - Number(total_amount)) > 0.01) {
-      console.error(`Price mismatch: server=${serverTotal}, client=${total_amount}`);
+      console.error(`Price mismatch: server=${serverTotal}, client=${total_amount}, deliveryFee=${serverDeliveryFee}`);
       return new Response(
         JSON.stringify({ error: "Valor do pedido inválido" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Use server-computed total for the actual payment
     const validatedTotal = serverTotal;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -67,6 +160,12 @@ Deno.serve(async (req) => {
     const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN")!;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Store delivery_info with server-calculated fee
+    const sanitizedDeliveryInfo = delivery_info ? {
+      ...delivery_info,
+      deliveryFee: serverDeliveryFee,
+    } : null;
 
     // 1. Create order in DB
     const { data: order, error: orderError } = await supabase
@@ -78,7 +177,7 @@ Deno.serve(async (req) => {
         total_amount: validatedTotal,
         items,
         order_type: order_type || "delivery",
-        delivery_info: delivery_info || null,
+        delivery_info: sanitizedDeliveryInfo,
         notes: notes || null,
         payment_status: "pending",
       })
@@ -164,6 +263,7 @@ Deno.serve(async (req) => {
         qr_code_base64: pixData?.qr_code_base64 || null,
         pix_key: pixData?.qr_code || null,
         amount: validatedTotal,
+        delivery_fee: serverDeliveryFee,
         expires_at: expirationDate,
         status: "pending",
       }),
