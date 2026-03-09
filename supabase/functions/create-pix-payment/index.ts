@@ -221,6 +221,8 @@ Deno.serve(async (req) => {
 
     const mpData = await mpResponse.json();
 
+    console.log("FULL MP RESPONSE:", JSON.stringify(mpData, null, 2));
+
     if (!mpResponse.ok) {
       console.error("MP API error:", JSON.stringify(mpData));
       await supabase.from("orders").update({ payment_status: "failed" }).eq("id", order.id);
@@ -230,7 +232,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const pixData = mpData.point_of_interaction?.transaction_data;
+    const qrCodeBase64 = mpData.point_of_interaction?.transaction_data?.qr_code_base64;
+    const qrCodeString = mpData.point_of_interaction?.transaction_data?.qr_code;
+
+    if (!qrCodeBase64 || !qrCodeString) {
+      console.error("QR Code não encontrado na resposta do Mercado Pago:", JSON.stringify(mpData, null, 2));
+      await supabase.from("orders").update({ payment_status: "failed" }).eq("id", order.id);
+      return new Response(
+        JSON.stringify({ error: "Falha ao gerar QR Code PIX. Tente novamente." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 3. Save payment in DB
     const { data: payment, error: paymentError } = await supabase
@@ -241,9 +253,9 @@ Deno.serve(async (req) => {
         amount: validatedTotal,
         status: "pending",
         method: "pix",
-        pix_key: pixData?.qr_code || null,
-        qr_code: pixData?.qr_code || null,
-        qr_code_base64: pixData?.qr_code_base64 || null,
+        pix_key: qrCodeString,
+        qr_code: qrCodeString,
+        qr_code_base64: qrCodeBase64,
         payment_details: mpData,
         expires_at: expirationDate,
       })
