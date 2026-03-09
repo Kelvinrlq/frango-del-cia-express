@@ -223,8 +223,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           complement,
           neighborhood: deliveryInfo.neighborhood,
           city: deliveryInfo.city,
+          state: deliveryInfo.state || "MS",
           cep,
-          deliveryFee,
         } : undefined,
         notes: orderType === "pickup" ? `Retirada às ${pickupTime}` : undefined,
       });
