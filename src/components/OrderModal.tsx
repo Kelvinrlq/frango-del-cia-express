@@ -65,6 +65,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pickupTime, setPickupTime] = useState("");
   const [deliveryName, setDeliveryName] = useState("");
   const [customerCpf, setCustomerCpf] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
 
   const [cepError, setCepError] = useState("");
 
