@@ -143,9 +143,20 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
   };
 
+  const handleCpfChange = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 11);
+    const formatted = digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    setCustomerCpf(formatted);
+  };
+
+  const isCpfValid = customerCpf.replace(/\D/g, "").length === 11;
+
   const canProceedForm = () => {
     if (orderType === "pickup") {
-      return pickupName.trim() && pickupTime.trim();
+      return pickupName.trim() && pickupTime.trim() && isCpfValid;
     }
     return (
       deliveryName.trim() &&
@@ -154,7 +165,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       cep.replace(/\D/g, "").length === 8 &&
       !outOfRange &&
       (deliveryInfo.deliveryFee ?? 0) > 0 &&
-      !distanceLoading
+      !distanceLoading &&
+      isCpfValid
     );
   };
 
