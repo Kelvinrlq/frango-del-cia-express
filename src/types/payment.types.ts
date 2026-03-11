@@ -2,6 +2,7 @@ export interface CreatePixPaymentRequest {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  customer_cpf: string;
   total_amount: number;
   items: Array<{
     id: string;

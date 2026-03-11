@@ -64,6 +64,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pickupName, setPickupName] = useState("");
   const [pickupTime, setPickupTime] = useState("");
   const [deliveryName, setDeliveryName] = useState("");
+  const [customerCpf, setCustomerCpf] = useState("");
 
   const [cepError, setCepError] = useState("");
 
@@ -142,9 +143,20 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
   };
 
+  const handleCpfChange = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 11);
+    const formatted = digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    setCustomerCpf(formatted);
+  };
+
+  const isCpfValid = customerCpf.replace(/\D/g, "").length === 11;
+
   const canProceedForm = () => {
     if (orderType === "pickup") {
-      return pickupName.trim() && pickupTime.trim();
+      return pickupName.trim() && pickupTime.trim() && isCpfValid;
     }
     return (
       deliveryName.trim() &&
@@ -153,7 +165,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       cep.replace(/\D/g, "").length === 8 &&
       !outOfRange &&
       (deliveryInfo.deliveryFee ?? 0) > 0 &&
-      !distanceLoading
+      !distanceLoading &&
+      isCpfValid
     );
   };
 
@@ -208,7 +221,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       const { data, error } = await createPixPayment({
         customer_name: customerName,
         customer_email: `${customerName.toLowerCase().replace(/\s+/g, ".")}@cliente.com`,
-        customer_phone: "00000000000", // placeholder - public app
+        customer_phone: "00000000000",
+        customer_cpf: customerCpf.replace(/\D/g, ""),
         total_amount: total,
         items: items.map((i) => ({
           id: i.id,
@@ -493,6 +507,25 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                     )}
                   </>
                 )}
+
+                {/* CPF */}
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">
+                    CPF do pagador *
+                  </label>
+                  <input
+                    type="text"
+                    value={customerCpf}
+                    onChange={(e) => handleCpfChange(e.target.value)}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                    inputMode="numeric"
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {customerCpf && !isCpfValid && (
+                    <p className="text-xs text-destructive mt-1">CPF deve ter 11 dígitos</p>
+                  )}
+                </div>
 
                 {/* Payment */}
                 <div>
