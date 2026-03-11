@@ -218,6 +218,7 @@ Deno.serve(async (req) => {
           number: cpfClean,
         },
       },
+      notification_url: `${Deno.env.get("SUPABASE_URL")!}/functions/v1/mercadopago-webhook`,
       date_of_expiration: expirationDate,
     };
 
