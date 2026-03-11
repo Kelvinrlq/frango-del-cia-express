@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
         last_name: customer_name.split(" ").slice(1).join(" ") || customer_name,
         identification: {
           type: "CPF",
-          number: "11144477735",
+          number: cpfClean,
         },
       },
       date_of_expiration: expirationDate,

@@ -508,6 +508,25 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </>
                 )}
 
+                {/* CPF */}
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">
+                    CPF do pagador *
+                  </label>
+                  <input
+                    type="text"
+                    value={customerCpf}
+                    onChange={(e) => handleCpfChange(e.target.value)}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                    inputMode="numeric"
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {customerCpf && !isCpfValid && (
+                    <p className="text-xs text-destructive mt-1">CPF deve ter 11 dígitos</p>
+                  )}
+                </div>
+
                 {/* Payment */}
                 <div>
                   <label className="block text-sm font-bold text-foreground mb-2">Forma de pagamento</label>
