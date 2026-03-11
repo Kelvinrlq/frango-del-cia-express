@@ -521,10 +521,47 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </>
                 )}
 
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">
+                    📧 Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    maxLength={255}
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {customerEmail && !isEmailValid && (
+                    <p className="text-xs text-destructive mt-1">Email inválido</p>
+                  )}
+                </div>
+
+                {/* Telefone */}
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">
+                    📱 Telefone *
+                  </label>
+                  <input
+                    type="text"
+                    value={customerPhone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                    inputMode="numeric"
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {customerPhone && !isPhoneValid && (
+                    <p className="text-xs text-destructive mt-1">Telefone deve ter pelo menos 10 dígitos</p>
+                  )}
+                </div>
+
                 {/* CPF */}
                 <div>
                   <label className="block text-sm font-bold text-foreground mb-1">
-                    CPF do pagador *
+                    🪪 CPF do pagador *
                   </label>
                   <input
                     type="text"
