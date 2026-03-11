@@ -203,6 +203,10 @@ Deno.serve(async (req) => {
         email: customer_email,
         first_name: customer_name.split(" ")[0],
         last_name: customer_name.split(" ").slice(1).join(" ") || customer_name,
+        identification: {
+          type: "CPF",
+          number: "11144477735",
+        },
       },
       date_of_expiration: expirationDate,
     };
