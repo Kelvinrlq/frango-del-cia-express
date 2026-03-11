@@ -221,7 +221,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       const { data, error } = await createPixPayment({
         customer_name: customerName,
         customer_email: `${customerName.toLowerCase().replace(/\s+/g, ".")}@cliente.com`,
-        customer_phone: "00000000000", // placeholder - public app
+        customer_phone: "00000000000",
+        customer_cpf: customerCpf.replace(/\D/g, ""),
         total_amount: total,
         items: items.map((i) => ({
           id: i.id,
