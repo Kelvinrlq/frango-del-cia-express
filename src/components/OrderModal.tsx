@@ -65,6 +65,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pickupTime, setPickupTime] = useState("");
   const [deliveryName, setDeliveryName] = useState("");
   const [customerCpf, setCustomerCpf] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
 
   const [cepError, setCepError] = useState("");
 
@@ -153,10 +155,21 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   };
 
   const isCpfValid = customerCpf.replace(/\D/g, "").length === 11;
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail);
+  const isPhoneValid = customerPhone.replace(/\D/g, "").length >= 10;
+
+  const handlePhoneChange = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 11);
+    const formatted = digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2");
+    setCustomerPhone(formatted);
+  };
 
   const canProceedForm = () => {
+    const commonValid = isCpfValid && isEmailValid && isPhoneValid;
     if (orderType === "pickup") {
-      return pickupName.trim() && pickupTime.trim() && isCpfValid;
+      return pickupName.trim() && pickupTime.trim() && commonValid;
     }
     return (
       deliveryName.trim() &&
@@ -166,7 +179,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       !outOfRange &&
       (deliveryInfo.deliveryFee ?? 0) > 0 &&
       !distanceLoading &&
-      isCpfValid
+      commonValid
     );
   };
 
@@ -220,8 +233,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       const customerName = orderType === "pickup" ? pickupName : deliveryName;
       const { data, error } = await createPixPayment({
         customer_name: customerName,
-        customer_email: `${customerName.toLowerCase().replace(/\s+/g, ".")}@cliente.com`,
-        customer_phone: "00000000000",
+        customer_email: customerEmail,
+        customer_phone: customerPhone.replace(/\D/g, ""),
         customer_cpf: customerCpf.replace(/\D/g, ""),
         total_amount: total,
         items: items.map((i) => ({
@@ -508,10 +521,47 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </>
                 )}
 
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">
+                    📧 Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    maxLength={255}
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {customerEmail && !isEmailValid && (
+                    <p className="text-xs text-destructive mt-1">Email inválido</p>
+                  )}
+                </div>
+
+                {/* Telefone */}
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">
+                    📱 Telefone *
+                  </label>
+                  <input
+                    type="text"
+                    value={customerPhone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                    inputMode="numeric"
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {customerPhone && !isPhoneValid && (
+                    <p className="text-xs text-destructive mt-1">Telefone deve ter pelo menos 10 dígitos</p>
+                  )}
+                </div>
+
                 {/* CPF */}
                 <div>
                   <label className="block text-sm font-bold text-foreground mb-1">
-                    CPF do pagador *
+                    🪪 CPF do pagador *
                   </label>
                   <input
                     type="text"
