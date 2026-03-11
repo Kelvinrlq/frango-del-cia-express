@@ -43,12 +43,22 @@ Deno.serve(async (req) => {
       customer_name,
       customer_email,
       customer_phone,
+      customer_cpf,
       total_amount,
       items,
       order_type,
       delivery_info,
       notes,
     } = await req.json();
+
+    // Validate CPF
+    const cpfClean = (customer_cpf || "").replace(/\D/g, "");
+    if (cpfClean.length !== 11) {
+      return new Response(
+        JSON.stringify({ error: "CPF inválido. Deve conter 11 dígitos." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Reject if client tries to send deliveryFee
     if (delivery_info?.deliveryFee !== undefined) {
