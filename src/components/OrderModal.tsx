@@ -233,8 +233,8 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       const customerName = orderType === "pickup" ? pickupName : deliveryName;
       const { data, error } = await createPixPayment({
         customer_name: customerName,
-        customer_email: `${customerName.toLowerCase().replace(/\s+/g, ".")}@cliente.com`,
-        customer_phone: "00000000000",
+        customer_email: customerEmail,
+        customer_phone: customerPhone.replace(/\D/g, ""),
         customer_cpf: customerCpf.replace(/\D/g, ""),
         total_amount: total,
         items: items.map((i) => ({
