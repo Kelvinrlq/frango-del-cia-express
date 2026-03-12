@@ -50,7 +50,7 @@ export default function ProductCard() {
         <div className="mt-4 flex items-end justify-between">
           <div>
             <p className="text-muted-foreground text-base font-bold">A partir de</p>
-            <p className="font-display text-5xl font-black text-primary leading-none">{formatCurrency(50)}</p>
+            <p className="font-display text-5xl font-black text-primary leading-none">{formatCurrency(1)}</p>
             <p className="text-sm text-muted-foreground font-semibold mt-1">Pix ou dinheiro</p>
           </div>
 
@@ -88,19 +88,19 @@ export default function ProductCard() {
       <div className="bg-muted px-5 py-4 grid grid-cols-2 gap-3 text-sm font-bold">
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💳 Débito:</span>
-          <span className="text-foreground">{formatCurrency(51)}</span>
+          <span className="text-foreground">{formatCurrency(2)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💳 Crédito:</span>
-          <span className="text-foreground">{formatCurrency(52.5)}</span>
+          <span className="text-foreground">{formatCurrency(3.5)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💰 Dinheiro:</span>
-          <span className="text-foreground">{formatCurrency(50)}</span>
+          <span className="text-foreground">{formatCurrency(1)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>📲 Pix:</span>
-          <span className="text-foreground">{formatCurrency(50)}</span>
+          <span className="text-foreground">{formatCurrency(1)}</span>
         </div>
       </div>
     </div>
