@@ -50,7 +50,7 @@ export default function ProductCard() {
         <div className="mt-4 flex items-end justify-between">
           <div>
             <p className="text-muted-foreground text-base font-bold">A partir de</p>
-            <p className="font-display text-5xl font-black text-primary leading-none">{formatCurrency(50)}</p>
+            <p className="font-display text-5xl font-black text-primary leading-none">{formatCurrency(1)}</p>
             <p className="text-sm text-muted-foreground font-semibold mt-1">Pix ou dinheiro</p>
           </div>
 
