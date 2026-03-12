@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     }
 
     // Server-side price validation — never trust client-submitted total
-    const FRANGO_PRICE = 50;
+    const FRANGO_PRICE = 1;
     const totalQuantity = items.reduce((sum: number, item: { quantity?: number }) => {
       const qty = Number(item.quantity);
       if (!Number.isFinite(qty) || qty <= 0 || qty !== Math.floor(qty)) {

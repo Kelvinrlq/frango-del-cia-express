@@ -88,19 +88,19 @@ export default function ProductCard() {
       <div className="bg-muted px-5 py-4 grid grid-cols-2 gap-3 text-sm font-bold">
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💳 Débito:</span>
-          <span className="text-foreground">{formatCurrency(51)}</span>
+          <span className="text-foreground">{formatCurrency(2)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💳 Crédito:</span>
-          <span className="text-foreground">{formatCurrency(52.5)}</span>
+          <span className="text-foreground">{formatCurrency(3.5)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💰 Dinheiro:</span>
-          <span className="text-foreground">{formatCurrency(50)}</span>
+          <span className="text-foreground">{formatCurrency(1)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>📲 Pix:</span>
-          <span className="text-foreground">{formatCurrency(50)}</span>
+          <span className="text-foreground">{formatCurrency(1)}</span>
         </div>
       </div>
     </div>
