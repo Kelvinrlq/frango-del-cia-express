@@ -11,7 +11,7 @@ import { createPixPayment } from "@/services/paymentService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
-import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
+import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2, ExternalLink } from "lucide-react";
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
@@ -96,10 +96,10 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       if (data) {
         setDeliveryInfo({
           cep: formatted,
-          street: data.logradouro,
-          neighborhood: data.bairro,
-          city: data.localidade,
-          state: data.uf || "MS",
+          street: data.logradouro || "",
+          neighborhood: data.bairro || "",
+          city: "Corumbá",
+          state: "MS",
           deliveryFee: 0,
         });
       } else {
@@ -139,7 +139,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   }, [deliveryInfo.street, deliveryInfo.neighborhood, deliveryInfo.city, deliveryInfo.state, houseNumber, cep]);
 
   const handleHouseNumberChange = (val: string) => {
-    setHouseNumber(val);
+    setHouseNumber(val.replace(/\D/g, ""));
     setOutOfRange(false);
     setDistanceKm(null);
     setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
@@ -199,8 +199,10 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       msg += `🚚 *Tipo:* ENTREGA\n`;
       msg += `👤 *Nome:* ${deliveryName}\n`;
       msg += `📍 *Endereço:* ${deliveryInfo.street}, ${houseNumber}${complement ? ` (${complement})` : ""}\n`;
-      msg += `🏘️ *Bairro:* ${deliveryInfo.neighborhood} — ${deliveryInfo.city}\n`;
+      msg += `🏘️ *Bairro:* ${deliveryInfo.neighborhood} — Corumbá, MS\n`;
       msg += `📮 *CEP:* ${cep}\n`;
+      const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`;
+      msg += `🗺️ *Mapa:* ${googleMapsLink}\n`;
       msg += `🛵 *Taxa de entrega:* ${formatCurrency(deliveryFee)}\n`;
     }
 
@@ -448,11 +450,38 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       />
                       {cepLoading && <p className="text-xs text-muted-foreground mt-1">Buscando endereço...</p>}
                       {cepError && <p className="text-xs text-destructive mt-1">{cepError}</p>}
-                      {deliveryInfo.street && (
-                        <div className="mt-2 bg-muted rounded-xl p-3 text-sm">
-                          <p className="font-semibold text-foreground">{deliveryInfo.street}</p>
-                          <p className="text-muted-foreground">{deliveryInfo.neighborhood} — {deliveryInfo.city}</p>
-                        </div>
+                      {deliveryInfo.street !== undefined && (
+                        <>
+                          <div className="mt-2">
+                            <label className="block text-sm font-bold text-foreground mb-1">Rua *</label>
+                            <input
+                              type="text"
+                              value={deliveryInfo.street || ""}
+                              onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, street: e.target.value }))}
+                              placeholder="Rua / Logradouro"
+                              className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                          </div>
+                          <div className="mt-2">
+                            <label className="block text-sm font-bold text-foreground mb-1">Bairro *</label>
+                            <input
+                              type="text"
+                              value={deliveryInfo.neighborhood || ""}
+                              onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, neighborhood: e.target.value }))}
+                              placeholder="Bairro"
+                              className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                          </div>
+                          <div className="mt-2">
+                            <label className="block text-sm font-bold text-foreground mb-1">Cidade / Estado</label>
+                            <input
+                              type="text"
+                              value="Corumbá, MS"
+                              disabled
+                              className="w-full border border-border rounded-xl px-4 py-3 text-muted-foreground bg-muted font-semibold cursor-not-allowed"
+                            />
+                          </div>
+                        </>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -504,6 +533,19 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                           🛵 Taxa de entrega: {formatCurrency(deliveryInfo.deliveryFee ?? 0)}
                         </p>
                       </div>
+                    )}
+
+                    {/* Google Maps link */}
+                    {deliveryInfo.street && houseNumber.trim() && deliveryInfo.neighborhood && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-primary font-semibold hover:underline"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Ver endereço no Google Maps
+                      </a>
                     )}
 
                     {/* Out of range */}
