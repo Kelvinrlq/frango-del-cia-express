@@ -448,11 +448,38 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       />
                       {cepLoading && <p className="text-xs text-muted-foreground mt-1">Buscando endereço...</p>}
                       {cepError && <p className="text-xs text-destructive mt-1">{cepError}</p>}
-                      {deliveryInfo.street && (
-                        <div className="mt-2 bg-muted rounded-xl p-3 text-sm">
-                          <p className="font-semibold text-foreground">{deliveryInfo.street}</p>
-                          <p className="text-muted-foreground">{deliveryInfo.neighborhood} — {deliveryInfo.city}</p>
-                        </div>
+                      {deliveryInfo.street !== undefined && (
+                        <>
+                          <div className="mt-2">
+                            <label className="block text-sm font-bold text-foreground mb-1">Rua *</label>
+                            <input
+                              type="text"
+                              value={deliveryInfo.street || ""}
+                              onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, street: e.target.value }))}
+                              placeholder="Rua / Logradouro"
+                              className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                          </div>
+                          <div className="mt-2">
+                            <label className="block text-sm font-bold text-foreground mb-1">Bairro *</label>
+                            <input
+                              type="text"
+                              value={deliveryInfo.neighborhood || ""}
+                              onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, neighborhood: e.target.value }))}
+                              placeholder="Bairro"
+                              className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                          </div>
+                          <div className="mt-2">
+                            <label className="block text-sm font-bold text-foreground mb-1">Cidade / Estado</label>
+                            <input
+                              type="text"
+                              value="Corumbá, MS"
+                              disabled
+                              className="w-full border border-border rounded-xl px-4 py-3 text-muted-foreground bg-muted font-semibold cursor-not-allowed"
+                            />
+                          </div>
+                        </>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
