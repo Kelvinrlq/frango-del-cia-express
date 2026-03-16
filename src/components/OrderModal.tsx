@@ -199,8 +199,10 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       msg += `🚚 *Tipo:* ENTREGA\n`;
       msg += `👤 *Nome:* ${deliveryName}\n`;
       msg += `📍 *Endereço:* ${deliveryInfo.street}, ${houseNumber}${complement ? ` (${complement})` : ""}\n`;
-      msg += `🏘️ *Bairro:* ${deliveryInfo.neighborhood} — ${deliveryInfo.city}\n`;
+      msg += `🏘️ *Bairro:* ${deliveryInfo.neighborhood} — Corumbá, MS\n`;
       msg += `📮 *CEP:* ${cep}\n`;
+      const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`;
+      msg += `🗺️ *Mapa:* ${googleMapsLink}\n`;
       msg += `🛵 *Taxa de entrega:* ${formatCurrency(deliveryFee)}\n`;
     }
 
