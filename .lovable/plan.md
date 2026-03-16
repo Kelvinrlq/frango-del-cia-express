@@ -1,85 +1,65 @@
 
 
-# Integração Mercado Pago PIX
+## Proteger Mensagem WhatsApp contra Edição de Preços
 
-## Resumo
+### Problema
+O cliente pode editar o preço e a taxa de entrega na mensagem do WhatsApp porque ela é gerada no frontend com valores manipuláveis. Além disso, a mensagem do grupo de entregadores não está sendo enviada corretamente (wa.me não funciona com IDs de grupo).
 
-Integrar pagamento PIX via Mercado Pago quando o cliente escolher PIX. Em vez de apenas mandar a mensagem WhatsApp pedindo PIX, o sistema vai gerar um QR Code real do Mercado Pago com o valor exato, o cliente paga, e o sistema detecta o pagamento antes de enviar o pedido pelo WhatsApp.
+### Solução
 
-## Passo 1: Configurar Secret
+Como você optou por manter o `wa.me` (draft), a mensagem continuará abrindo como rascunho. Mas podemos proteger os valores gerando a mensagem **no servidor** e corrigir o envio ao grupo.
 
-Adicionar o Access Token de teste do Mercado Pago (`MERCADOPAGO_ACCESS_TOKEN`) como secret no Supabase.
+### Alterações
 
-## Passo 2: Criar tabelas no banco
+#### 1. Nova Edge Function: `build-whatsapp-message`
+- Recebe: `order_id` (UUID do pedido já salvo no banco)
+- Busca o pedido na tabela `orders` (com `items`, `total_amount`, `delivery_info`, `order_type`, `notes`, `customer_name`, `customer_phone`)
+- Gera a mensagem formatada no servidor com os valores validados do banco
+- Gera também a mensagem do grupo de entregadores (se delivery)
+- Retorna: `{ establishmentMessage: string, deliveryGroupMessage: string | null, googleMapsLink: string | null }`
+- O cliente NÃO consegue alterar preços porque eles vêm do banco
 
-- **`orders`**: id, customer_name, customer_phone, total_amount, payment_status (pending/paid/failed/cancelled), items (JSONB), order_type, delivery_info (JSONB), created_at
-- **`payments`**: id, order_id (FK), mercadopago_payment_id, amount, status, pix_key, qr_code, qr_code_base64, expires_at, created_at
+#### 2. Alterar fluxo no `OrderModal.tsx`
 
-Sem RLS (app público, sem autenticação).
+**Para pagamentos PIX (já tem order_id):**
+- Após pagamento aprovado (`handlePixApproved`): chamar `build-whatsapp-message` com o `order_id` do `pixData`
+- Abrir `wa.me` com a mensagem retornada pelo servidor
 
-## Passo 3: Criar 3 Edge Functions
+**Para pagamentos não-PIX (dinheiro/débito/crédito):**
+- Em `handleSend`, primeiro chamar `create-pix-payment` SEM gerar PIX — ou criar uma nova edge function `create-order` que só salva o pedido no banco e retorna o `order_id`
+- Depois chamar `build-whatsapp-message` com esse `order_id`
+- Abrir `wa.me` com a mensagem do servidor
 
-### `create-pix-payment`
-- Recebe dados do pedido (valor, email, itens)
-- Cria pedido na tabela `orders`
-- Chama API Mercado Pago `POST /v1/payments` com `payment_method_id: "pix"`
-- Salva resposta na tabela `payments`
-- Retorna QR Code + chave PIX + data de expiração
+**Problema:** Para não-PIX, não existe `order_id` porque o pedido não é salvo no banco. Solução: criar edge function `create-order` que salva o pedido (com validação server-side de preço/frete) e retorna o ID.
 
-### `check-payment-status`
-- Recebe `payment_id`
-- Consulta API Mercado Pago `GET /v1/payments/{id}`
-- Atualiza status no banco se mudou
-- Retorna status atual
+#### 3. Corrigir envio ao grupo de entregadores
+- `wa.me` NÃO funciona com IDs de grupo WhatsApp (formato `120363...@g.us`)
+- `wa.me` só funciona com números de telefone
+- **Solução**: Usar `https://web.whatsapp.com/send?phone=&text=` para o estabelecimento e adicionar instruções no app para o dono encaminhar ao grupo, OU usar a API do WhatsApp no futuro
+- Por ora, a mensagem do grupo pode ser enviada como segundo `window.open` para o número do estabelecimento com prefixo "[ENTREGA]" para fácil identificação
 
-### `mercadopago-webhook`
-- Recebe notificações do Mercado Pago
-- Atualiza status do pagamento e do pedido no banco
-- Retorna 200 OK
+#### 4. Nova Edge Function: `create-order`
+- Similar ao `create-pix-payment` mas sem chamar Mercado Pago
+- Valida preço e frete no servidor (mesma lógica já existente)
+- Salva pedido na tabela `orders` com `payment_status: "pending_cash"` (ou similar)
+- Retorna `order_id` e `total_amount` validados
 
-## Passo 4: Criar componentes frontend
+### Fluxo Revisado
 
-### `src/types/payment.types.ts`
-Interfaces para PixPaymentData, PaymentStatusData.
-
-### `src/services/paymentService.ts`
-Funções: `createPixPayment()`, `checkPaymentStatus()`.
-
-### `src/components/PixPaymentDisplay.tsx`
-- QR Code (imagem base64)
-- Chave PIX copiável com botão "Copiar"
-- Valor formatado
-- Countdown timer (30 min)
-- Instruções ao cliente
-
-### `src/components/PaymentStatus.tsx`
-- Polling a cada 3 segundos
-- Estados visuais: aguardando (spinner), confirmado (check verde), erro (X vermelho)
-- Auto-para polling após aprovação ou 30 min
-
-## Passo 5: Modificar OrderModal.tsx
-
-Quando o pagamento for **PIX** (entrega ou retirada):
-1. Ao clicar "Enviar Pedido", em vez de abrir WhatsApp direto, chama `create-pix-payment`
-2. Exibe novo step `"pix"` com o componente PixPaymentDisplay
-3. Monitora pagamento com polling (PaymentStatus)
-4. Quando pagamento aprovado → envia mensagem WhatsApp automaticamente + tela de sucesso
-
-Quando o pagamento for **dinheiro/débito/crédito** (só entrega):
-- Mantém fluxo atual: abre WhatsApp direto
-
-### Novo fluxo de steps
 ```text
-type → form → confirm → [pix] → sent
-                     ↘ (não-pix) → sent
+PIX:      form → confirm → create-pix-payment → pix → approved → build-whatsapp-message → wa.me
+Não-PIX:  form → confirm → create-order → build-whatsapp-message → wa.me
 ```
 
-## Passo 6: Config
+### Arquivos Envolvidos
+- `supabase/functions/create-order/index.ts` (novo)
+- `supabase/functions/build-whatsapp-message/index.ts` (novo)
+- `supabase/config.toml` (adicionar 2 novas functions)
+- `src/components/OrderModal.tsx` (alterar `handleSend` e `handlePixApproved`)
+- `src/services/orderService.ts` (novo — funções `createOrder()` e `buildWhatsAppMessage()`)
 
-Adicionar as 3 edge functions ao `supabase/config.toml` com `verify_jwt = false`.
-
-## O que NÃO muda
-- Fluxo de retirada continua com PIX obrigatório, mas agora com QR Code real
-- Fluxo de entrega com dinheiro/débito/crédito continua indo direto pro WhatsApp
-- Cálculo de frete, validações de endereço, nome — tudo mantido
+### Sobre o Grupo de Entregadores
+O `wa.me` não suporta envio para grupos WhatsApp (IDs `@g.us`). As opções reais são:
+1. Enviar a mensagem de entrega para o número do estabelecimento com marcação "[ENTREGA]"
+2. Integrar Twilio/WhatsApp Business API no futuro para envio automático a grupos
 
