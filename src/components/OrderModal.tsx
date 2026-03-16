@@ -216,12 +216,31 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     return encodeURIComponent(msg);
   };
 
+  const buildDeliveryGroupMessage = () => {
+    const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`;
+    const customerName = deliveryName;
+    const phone = customerPhone || "";
+
+    let msg = `📦 *Novo Pedido de Entrega:*\n\n`;
+    msg += `📦 *Cliente:* ${customerName}\n`;
+    msg += `📞 *Telefone:* ${phone}\n`;
+    msg += `📍 *Endereço:* ${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}\n`;
+    msg += `🏘️ *Complemento:* ${complement || "-"}\n`;
+    msg += `🗺️ *Google Maps:* ${googleMapsLink}\n`;
+    msg += `💰 *Total:* ${formatCurrency(total)}`;
+
+    return encodeURIComponent(msg);
+  };
+
+  const DELIVERY_GROUP_ID = "120363420815269038";
+
   const sendWhatsApp = () => {
     const msg = buildWhatsAppMessage();
     window.open(`https://wa.me/${ESTABLISHMENT_PHONE}?text=${msg}`, "_blank");
     if (orderType === "delivery") {
+      const groupMsg = buildDeliveryGroupMessage();
       setTimeout(() => {
-        window.open(`https://wa.me/120363423717180111?text=${msg}`, "_blank");
+        window.open(`https://wa.me/${DELIVERY_GROUP_ID}?text=${groupMsg}`, "_blank");
       }, 800);
     }
   };
