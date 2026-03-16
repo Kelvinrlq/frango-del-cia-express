@@ -139,7 +139,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   }, [deliveryInfo.street, deliveryInfo.neighborhood, deliveryInfo.city, deliveryInfo.state, houseNumber, cep]);
 
   const handleHouseNumberChange = (val: string) => {
-    setHouseNumber(val);
+    setHouseNumber(val.replace(/\D/g, ""));
     setOutOfRange(false);
     setDistanceKm(null);
     setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
