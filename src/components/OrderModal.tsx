@@ -533,6 +533,19 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       </div>
                     )}
 
+                    {/* Google Maps link */}
+                    {deliveryInfo.street && houseNumber.trim() && deliveryInfo.neighborhood && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-primary font-semibold hover:underline"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Ver endereço no Google Maps
+                      </a>
+                    )}
+
                     {/* Out of range */}
                     {outOfRange && (
                       <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm">
