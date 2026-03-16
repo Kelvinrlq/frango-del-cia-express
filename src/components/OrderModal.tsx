@@ -96,10 +96,10 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       if (data) {
         setDeliveryInfo({
           cep: formatted,
-          street: data.logradouro,
-          neighborhood: data.bairro,
-          city: data.localidade,
-          state: data.uf || "MS",
+          street: data.logradouro || "",
+          neighborhood: data.bairro || "",
+          city: "Corumbá",
+          state: "MS",
           deliveryFee: 0,
         });
       } else {
