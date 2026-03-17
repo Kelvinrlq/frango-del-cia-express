@@ -184,67 +184,32 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     );
   };
 
-  const buildWhatsAppMessage = () => {
-    const itemLines = items
-      .map((i) => `  • ${i.quantity}x ${i.name} — ${formatCurrency(i.unitPrice * i.quantity)}`)
-      .join("\n");
-
-    let msg = `🍗 *NOVO PEDIDO — Casa do Frango Assado da 21*\n\n`;
-    msg += `📋 *Itens:*\n${itemLines}\n\n`;
-
-    if (orderType === "pickup") {
-      msg += `🏪 *Tipo:* RETIRADA\n`;
-      msg += `👤 *Nome:* ${pickupName}\n`;
-      msg += `⏰ *Horário de retirada:* ${pickupTime}\n`;
-    } else {
-      msg += `🚚 *Tipo:* ENTREGA\n`;
-      msg += `👤 *Nome:* ${deliveryName}\n`;
-      msg += `📍 *Endereço:* ${deliveryInfo.street}, ${houseNumber}${complement ? ` (${complement})` : ""}\n`;
-      msg += `🏘️ *Bairro:* ${deliveryInfo.neighborhood} — Corumbá, MS\n`;
-      msg += `📮 *CEP:* ${cep}\n`;
-      const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`;
-      msg += `🗺️ *Mapa:* ${googleMapsLink}\n`;
-      msg += `🛵 *Taxa de entrega:* ${formatCurrency(deliveryFee)}\n`;
+  const sendWhatsAppFromServer = async (orderId: string) => {
+    const { data: msgData, error: msgError } = await buildWhatsAppMessage(orderId);
+    if (msgError || !msgData) {
+      console.error("Failed to build WhatsApp message:", msgError);
+      return;
     }
 
-    msg += `\n💳 *Pagamento:* ${PAYMENT_LABELS[payment]}\n`;
-    msg += `💰 *Total: ${formatCurrency(total)}*\n`;
+    // Send to establishment
+    window.open(
+      `https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodeURIComponent(msgData.establishmentMessage)}`,
+      "_blank"
+    );
 
-    if (payment === "pix") {
-      msg += `\n✅ *Pagamento PIX já confirmado!*`;
-    }
-
-    return encodeURIComponent(msg);
-  };
-
-  const buildDeliveryGroupMessage = () => {
-    const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`;
-    const customerName = deliveryName;
-    const phone = customerPhone || "";
-
-    let msg = `📦 *Novo Pedido de Entrega:*\n\n`;
-    msg += `📦 *Cliente:* ${customerName}\n`;
-    msg += `📞 *Telefone:* ${phone}\n`;
-    msg += `📍 *Endereço:* ${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}\n`;
-    msg += `🏘️ *Complemento:* ${complement || "-"}\n`;
-    msg += `🗺️ *Google Maps:* ${googleMapsLink}\n`;
-    msg += `💰 *Total:* ${formatCurrency(total)}`;
-
-    return encodeURIComponent(msg);
-  };
-
-  const DELIVERY_GROUP_ID = "120363420815269038";
-
-  const sendWhatsApp = () => {
-    const msg = buildWhatsAppMessage();
-    window.open(`https://wa.me/${ESTABLISHMENT_PHONE}?text=${msg}`, "_blank");
-    if (orderType === "delivery") {
-      const groupMsg = buildDeliveryGroupMessage();
+    // Send delivery group message as second window to establishment with [ENTREGA] prefix
+    if (msgData.deliveryGroupMessage) {
       setTimeout(() => {
-        window.open(`https://wa.me/${DELIVERY_GROUP_ID}?text=${groupMsg}`, "_blank");
+        window.open(
+          `https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodeURIComponent(msgData.deliveryGroupMessage!)}`,
+          "_blank"
+        );
       }, 800);
     }
   };
+
+  const [sendLoading, setSendLoading] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const handleSend = async () => {
     if (payment === "pix") {
@@ -288,15 +253,53 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       setPixData(data);
       setStep("pix");
     } else {
-      // Non-PIX: send WhatsApp directly
-      sendWhatsApp();
+      // Non-PIX: create order on server first, then get server-generated message
+      setSendLoading(true);
+      setSendError(null);
+
+      const customerName = orderType === "pickup" ? pickupName : deliveryName;
+      const { data: orderData, error: orderError } = await createOrder({
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone.replace(/\D/g, ""),
+        total_amount: total,
+        items: items.map((i) => ({
+          id: i.id,
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+        order_type: orderType,
+        payment_method: payment,
+        delivery_info: orderType === "delivery" ? {
+          street: deliveryInfo.street,
+          houseNumber,
+          complement,
+          neighborhood: deliveryInfo.neighborhood,
+          city: deliveryInfo.city,
+          state: deliveryInfo.state || "MS",
+          cep,
+        } : undefined,
+        notes: orderType === "pickup" ? `Retirada às ${pickupTime}` : undefined,
+      });
+
+      if (orderError || !orderData) {
+        setSendLoading(false);
+        setSendError(orderError || "Erro ao criar pedido");
+        return;
+      }
+
+      await sendWhatsAppFromServer(orderData.order_id);
+      setSendLoading(false);
       setStep("sent");
       clearCart();
     }
   };
 
-  const handlePixApproved = () => {
-    sendWhatsApp();
+  const handlePixApproved = async () => {
+    if (pixData?.order_id) {
+      await sendWhatsAppFromServer(pixData.order_id);
+    }
     setStep("sent");
     clearCart();
   };
