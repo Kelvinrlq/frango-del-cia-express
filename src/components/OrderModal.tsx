@@ -748,13 +748,18 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </button>
                   <button
                     onClick={handleSend}
-                    disabled={pixLoading}
+                    disabled={pixLoading || sendLoading}
                     className="flex-1 gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {pixLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
                         Gerando PIX...
+                      </>
+                    ) : sendLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Enviando...
                       </>
                     ) : (
                       "Enviar Pedido 🍗"
