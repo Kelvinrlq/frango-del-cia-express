@@ -8,6 +8,7 @@ import {
 } from "@/types/order";
 import { getDeliveryDistance, calculateDeliveryFee } from "@/services/deliveryService";
 import { createPixPayment } from "@/services/paymentService";
+import { createOrder, buildWhatsAppMessage } from "@/services/orderService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
