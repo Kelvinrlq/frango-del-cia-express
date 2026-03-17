@@ -733,9 +733,9 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </div>
                 )}
 
-                {pixError && (
+                {(pixError || sendError) && (
                   <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm text-destructive font-bold">
-                    ⚠️ {pixError}
+                    ⚠️ {pixError || sendError}
                   </div>
                 )}
 
