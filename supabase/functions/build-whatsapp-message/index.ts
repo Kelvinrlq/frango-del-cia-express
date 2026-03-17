@@ -1,0 +1,136 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+const PAYMENT_LABELS: Record<string, string> = {
+  pix: "📲 PIX",
+  dinheiro: "💵 Dinheiro",
+  debito: "💳 Débito",
+  credito: "💳 Crédito",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { order_id } = await req.json();
+
+    if (!order_id) {
+      return new Response(
+        JSON.stringify({ error: "order_id é obrigatório" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: order, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", order_id)
+      .single();
+
+    if (error || !order) {
+      return new Response(
+        JSON.stringify({ error: "Pedido não encontrado" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const items = order.items as Array<{ name: string; quantity: number; unitPrice: number }>;
+    const deliveryInfo = order.delivery_info as {
+      street?: string;
+      houseNumber?: string;
+      complement?: string;
+      neighborhood?: string;
+      city?: string;
+      state?: string;
+      cep?: string;
+      deliveryFee?: number;
+    } | null;
+
+    const itemLines = items
+      .map((i) => `  • ${i.quantity}x ${i.name} — ${formatCurrency(i.unitPrice * i.quantity)}`)
+      .join("\n");
+
+    const isPix = order.payment_status === "pending" || order.payment_status === "paid";
+    const paymentMethod = order.payment_status.startsWith("pending_")
+      ? order.payment_status.replace("pending_", "")
+      : order.payment_status === "pending" || order.payment_status === "paid"
+        ? "pix"
+        : "pix";
+
+    // Build establishment message
+    let msg = `🍗 *NOVO PEDIDO — Casa do Frango Assado da 21*\n\n`;
+    msg += `📋 *Itens:*\n${itemLines}\n\n`;
+
+    let googleMapsLink: string | null = null;
+
+    if (order.order_type === "pickup") {
+      msg += `🏪 *Tipo:* RETIRADA\n`;
+      msg += `👤 *Nome:* ${order.customer_name}\n`;
+      if (order.notes) msg += `⏰ *Horário:* ${order.notes.replace("Retirada às ", "")}\n`;
+    } else {
+      msg += `🚚 *Tipo:* ENTREGA\n`;
+      msg += `👤 *Nome:* ${order.customer_name}\n`;
+      if (deliveryInfo) {
+        const addr = `${deliveryInfo.street}, ${deliveryInfo.houseNumber}${deliveryInfo.complement ? ` (${deliveryInfo.complement})` : ""}`;
+        msg += `📍 *Endereço:* ${addr}\n`;
+        msg += `🏘️ *Bairro:* ${deliveryInfo.neighborhood} — ${deliveryInfo.city || "Corumbá"}, ${deliveryInfo.state || "MS"}\n`;
+        if (deliveryInfo.cep) msg += `📮 *CEP:* ${deliveryInfo.cep}\n`;
+        googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${deliveryInfo.houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`;
+        msg += `🗺️ *Mapa:* ${googleMapsLink}\n`;
+        if (deliveryInfo.deliveryFee) {
+          msg += `🛵 *Taxa de entrega:* ${formatCurrency(deliveryInfo.deliveryFee)}\n`;
+        }
+      }
+    }
+
+    msg += `\n💳 *Pagamento:* ${PAYMENT_LABELS[paymentMethod] || paymentMethod}\n`;
+    msg += `💰 *Total: ${formatCurrency(order.total_amount)}*\n`;
+
+    if (paymentMethod === "pix") {
+      msg += `\n✅ *Pagamento PIX já confirmado!*`;
+    }
+
+    // Build delivery group message (for delivery orders)
+    let deliveryGroupMessage: string | null = null;
+    if (order.order_type === "delivery" && deliveryInfo) {
+      let gmsg = `📦 *Novo Pedido de Entrega:*\n\n`;
+      gmsg += `📦 *Cliente:* ${order.customer_name}\n`;
+      gmsg += `📞 *Telefone:* ${order.customer_phone}\n`;
+      gmsg += `📍 *Endereço:* ${deliveryInfo.street}, ${deliveryInfo.houseNumber}, ${deliveryInfo.neighborhood}\n`;
+      gmsg += `🏘️ *Complemento:* ${deliveryInfo.complement || "-"}\n`;
+      if (googleMapsLink) gmsg += `🗺️ *Google Maps:* ${googleMapsLink}\n`;
+      gmsg += `💰 *Total:* ${formatCurrency(order.total_amount)}`;
+      deliveryGroupMessage = gmsg;
+    }
+
+    return new Response(
+      JSON.stringify({
+        establishmentMessage: msg,
+        deliveryGroupMessage,
+        googleMapsLink,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return new Response(
+      JSON.stringify({ error: "Erro interno do servidor" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
