@@ -41,19 +41,18 @@ Deno.serve(async (req) => {
     } = await req.json();
 
     // Validate required fields
-    if (!customer_name || !customer_email || !customer_phone || !total_amount || !items || !Array.isArray(items) || items.length === 0) {
-      return new Response(
+if (!customer_name || !customer_phone || !total_amount || !items || !Array.isArray(items) || items.length === 0) {      return new Response(
         JSON.stringify({ error: "Campos obrigatórios faltando" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!EMAIL_REGEX.test(customer_email)) {
-      return new Response(
-        JSON.stringify({ error: "E-mail inválido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+if (customer_email && !EMAIL_REGEX.test(customer_email)) {
+  return new Response(
+    JSON.stringify({ error: "E-mail inválido" }),
+    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
 
     // Reject client-submitted deliveryFee
     if (delivery_info?.deliveryFee !== undefined) {
@@ -159,26 +158,35 @@ Deno.serve(async (req) => {
       : payment_method === "credito" ? "pending_credit"
       : "pending";
 
-    const { data: order, error: orderError } = await supabase
+    // VERSÃO CORRIGIDA: Convertendo items e delivery_info para JSON string
+      const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
         customer_name,
         customer_email,
         customer_phone: customer_phone.replace(/\D/g, ""),
         total_amount: serverTotal,
-        items,
+        items, // ✅ SEM JSON.stringify
         order_type: order_type || "delivery",
-        delivery_info: sanitizedDeliveryInfo,
+        delivery_info: sanitizedDeliveryInfo || null, // ✅ SEM JSON.stringify
         notes: notes || null,
         payment_status: paymentStatus,
       })
       .select()
       .single();
 
+    // MELHOR LOGGING DO ERRO
     if (orderError) {
       console.error("Order insert error:", orderError);
+      console.error("Error message:", orderError?.message);
+      console.error("Error code:", orderError?.code);
+      console.error("Error details:", JSON.stringify(orderError, null, 2));
+      
       return new Response(
-        JSON.stringify({ error: "Erro ao criar pedido" }),
+        JSON.stringify({ 
+          error: "Erro ao criar pedido",
+          details: orderError?.message // Retorna detalhes do erro para debug
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

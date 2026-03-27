@@ -21,7 +21,7 @@ interface OrderModalProps {
   onClose: () => void;
 }
 
-type Step = "type" | "form" | "confirm" | "pix" | "sent";
+type Step = "type" | "payment" | "form" | "confirm" | "pix" | "sent";
 type OrderType = "delivery" | "pickup";
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
@@ -167,10 +167,17 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     setCustomerPhone(formatted);
   };
 
+  // Validação que muda conforme o método de pagamento
   const canProceedForm = () => {
-    const commonValid = isCpfValid && isEmailValid && isPhoneValid;
+    const isPhoneEmailValid = isPhoneValid;
+    
+    // Se for PIX, exigir email e CPF
+    if (payment === "pix") {
+      if (!isEmailValid || !isCpfValid) return false;
+    }
+    
     if (orderType === "pickup") {
-      return pickupName.trim() && pickupTime.trim() && commonValid;
+      return pickupName.trim() && pickupTime.trim() && isPhoneEmailValid;
     }
     return (
       deliveryName.trim() &&
@@ -180,7 +187,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       !outOfRange &&
       (deliveryInfo.deliveryFee ?? 0) > 0 &&
       !distanceLoading &&
-      commonValid
+      isPhoneEmailValid
     );
   };
 
@@ -191,13 +198,11 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       return;
     }
 
-    // Send to establishment
     window.open(
       `https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodeURIComponent(msgData.establishmentMessage)}`,
       "_blank"
     );
 
-    // Send delivery group message as second window to establishment with [ENTREGA] prefix
     if (msgData.deliveryGroupMessage) {
       setTimeout(() => {
         window.open(
@@ -213,7 +218,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
   const handleSend = async () => {
     if (payment === "pix") {
-      // Create PIX payment
       setPixLoading(true);
       setPixError(null);
 
@@ -253,7 +257,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       setPixData(data);
       setStep("pix");
     } else {
-      // Non-PIX: create order on server first, then get server-generated message
       setSendLoading(true);
       setSendError(null);
 
@@ -317,6 +320,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
   const stepTitle = () => {
     if (step === "type") return "Como deseja receber?";
+    if (step === "payment") return "Forma de pagamento";
     if (step === "form") return orderType === "delivery" ? "Endereço de entrega" : "Dados para retirada";
     if (step === "confirm") return "Resumo do pedido";
     if (step === "pix") return "Pagamento PIX";
@@ -355,7 +359,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                 {(["delivery", "pickup"] as OrderType[]).map((t) => (
                   <button
                     key={t}
-                    onClick={() => { setOrderType(t); setPayment("pix"); }}
+                    onClick={() => { setOrderType(t); }}
                     className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
                       orderType === t
                         ? "border-primary bg-primary/10"
@@ -380,7 +384,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                 ))}
 
                 <button
-                  onClick={() => setStep("form")}
+                  onClick={() => setStep("payment")}
                   className="w-full gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity mt-2"
                 >
                   Continuar →
@@ -388,7 +392,60 @@ export default function OrderModal({ onClose }: OrderModalProps) {
               </div>
             )}
 
-            {/* STEP 2 — Form */}
+            {/* STEP 2 — Payment Method */}
+            {step === "payment" && (
+              <div className="space-y-4 animate-fade-in">
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-3">Escolha a forma de pagamento:</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {availablePayments.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPayment(p)}
+                        className={`p-4 rounded-xl border-2 text-sm font-bold transition-all ${
+                          payment === p
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        {PAYMENT_LABELS[p]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {payment === "pix" && (
+                  <div className="bg-muted border border-primary/30 rounded-xl p-3 text-sm font-semibold text-foreground">
+                    📲 PIX — Você receberá um QR Code para escanear
+                  </div>
+                )}
+
+                {(payment === "dinheiro" || payment === "debito" || payment === "credito") && (
+                  <div className="bg-muted border border-primary/30 rounded-xl p-3 text-sm font-semibold text-foreground">
+                    {payment === "dinheiro" && "💵 Dinheiro — Pague na entrega"}
+                    {payment === "debito" && "💳 Débito — Máquina do entregador"}
+                    {payment === "credito" && "💳 Crédito — Máquina do entregador"}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setStep("type")}
+                    className="flex-1 py-3 rounded-xl border-2 border-border text-foreground font-bold hover:bg-muted transition-colors"
+                  >
+                    ← Voltar
+                  </button>
+                  <button
+                    onClick={() => setStep("form")}
+                    className="flex-1 gradient-hero text-secondary font-display text-xl py-3 rounded-xl shadow-button hover:opacity-90 transition-opacity"
+                  >
+                    Continuar →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3 — Form */}
             {step === "form" && (
               <div className="space-y-4 animate-fade-in">
                 {orderType === "pickup" ? (
@@ -530,7 +587,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       </div>
                     </div>
 
-                    {/* Calculate delivery fee button */}
                     {deliveryInfo.street && houseNumber.trim() && (
                       <button
                         onClick={calculateFee}
@@ -548,7 +604,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       </button>
                     )}
 
-                    {/* Fee result */}
                     {(deliveryInfo.deliveryFee ?? 0) > 0 && distanceKm !== null && (
                       <div className="bg-muted border border-primary/30 rounded-xl p-3 text-sm">
                         <p className="text-muted-foreground">Distância: {distanceKm} km</p>
@@ -558,7 +613,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       </div>
                     )}
 
-                    {/* Google Maps link */}
                     {deliveryInfo.street && houseNumber.trim() && deliveryInfo.neighborhood && (
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`}
@@ -571,7 +625,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       </a>
                     )}
 
-                    {/* Out of range */}
                     {outOfRange && (
                       <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm">
                         <p className="text-destructive font-bold flex items-center gap-2">
@@ -585,24 +638,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                     )}
                   </>
                 )}
-
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-bold text-foreground mb-1">
-                    📧 Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    maxLength={255}
-                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  {customerEmail && !isEmailValid && (
-                    <p className="text-xs text-destructive mt-1">Email inválido</p>
-                  )}
-                </div>
 
                 {/* Telefone */}
                 <div>
@@ -623,53 +658,50 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   )}
                 </div>
 
-                {/* CPF */}
-                <div>
-                  <label className="block text-sm font-bold text-foreground mb-1">
-                    🪪 CPF do pagador *
-                  </label>
-                  <input
-                    type="text"
-                    value={customerCpf}
-                    onChange={(e) => handleCpfChange(e.target.value)}
-                    placeholder="000.000.000-00"
-                    maxLength={14}
-                    inputMode="numeric"
-                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  {customerCpf && !isCpfValid && (
-                    <p className="text-xs text-destructive mt-1">CPF deve ter 11 dígitos</p>
-                  )}
-                </div>
-
-                {/* Payment */}
-                <div>
-                  <label className="block text-sm font-bold text-foreground mb-2">Forma de pagamento</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {availablePayments.map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setPayment(p)}
-                        className={`p-3 rounded-xl border-2 text-sm font-bold transition-all ${
-                          payment === p
-                            ? "border-primary bg-primary/10 text-foreground"
-                            : "border-border bg-muted text-muted-foreground hover:border-primary/40"
-                        }`}
-                      >
-                        {PAYMENT_LABELS[p]}
-                      </button>
-                    ))}
+                {/* Email - Só mostrar se for PIX */}
+                {payment === "pix" && (
+                  <div>
+                    <label className="block text-sm font-bold text-foreground mb-1">
+                      📧 Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="seu@email.com"
+                      maxLength={255}
+                      className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    {customerEmail && !isEmailValid && (
+                      <p className="text-xs text-destructive mt-1">Email inválido</p>
+                    )}
                   </div>
-                  {orderType === "pickup" && (
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      Retirada aceita apenas PIX como pagamento antecipado.
-                    </p>
-                  )}
-                </div>
+                )}
+
+                {/* CPF - Só mostrar se for PIX */}
+                {payment === "pix" && (
+                  <div>
+                    <label className="block text-sm font-bold text-foreground mb-1">
+                      🪪 CPF do pagador *
+                    </label>
+                    <input
+                      type="text"
+                      value={customerCpf}
+                      onChange={(e) => handleCpfChange(e.target.value)}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      inputMode="numeric"
+                      className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    {customerCpf && !isCpfValid && (
+                      <p className="text-xs text-destructive mt-1">CPF deve ter 11 dígitos</p>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setStep("type")}
+                    onClick={() => setStep("payment")}
                     className="flex-1 py-3 rounded-xl border-2 border-border text-foreground font-bold hover:bg-muted transition-colors"
                   >
                     ← Voltar
@@ -685,7 +717,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
               </div>
             )}
 
-            {/* STEP 3 — Confirm */}
+            {/* STEP 4 — Confirm */}
             {step === "confirm" && (
               <div className="space-y-4 animate-fade-in">
                 <div className="bg-muted rounded-xl p-4 space-y-2">
@@ -769,7 +801,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
               </div>
             )}
 
-            {/* STEP 4 — PIX Payment */}
+            {/* STEP 5 — PIX Payment */}
             {step === "pix" && pixData && (
               <div className="space-y-4 animate-fade-in">
                 <PixPaymentDisplay
