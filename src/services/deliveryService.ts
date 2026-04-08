@@ -1,35 +1,7 @@
-import { supabase } from "@/integrations/supabase/client";
-
 /**
- * Tabela de taxas por distância arredondada (km).
+ * Taxa fixa de entrega para Corumbá: R$ 10,00
  */
-const FEE_TABLE: [number, number][] = [
-  [1.0, 7.0],
-  [1.5, 8.5],
-  [2.0, 9.5],
-  [2.5, 11.0],
-  [3.0, 12.0],
-  [3.5, 13.5],
-  [4.0, 15.0],
-  [4.5, 16.5],
-  [5.0, 18.0],
-  [5.5, 19.5],
-  [6.0, 21.0],
-  [6.5, 22.5],
-  [7.0, 24.0],
-];
-
-/**
- * Calcula a taxa de entrega com base na distância em km.
- * Retorna null se acima de 4 km.
- */
-export function calculateDeliveryFee(distanceKm: number): number | null {
-  const roundedKm = Math.round(distanceKm * 2) / 2;
-  for (const [maxKm, fee] of FEE_TABLE) {
-    if (roundedKm <= maxKm) return fee;
-  }
-  return null; // fora da área de cobertura
-}
+const FIXED_DELIVERY_FEE = 10.0;
 
 export interface DeliveryDistanceResult {
   distanceKm: number;
@@ -39,7 +11,7 @@ export interface DeliveryDistanceResult {
 }
 
 /**
- * Chama a edge function para calcular distância e retorna a taxa.
+ * Retorna taxa fixa de R$ 10,00 para Corumbá
  */
 export async function getDeliveryDistance(
   street: string,
@@ -49,23 +21,20 @@ export async function getDeliveryDistance(
   state?: string,
   zipCode?: string
 ): Promise<DeliveryDistanceResult> {
-  const { data, error } = await supabase.functions.invoke("calculate-delivery", {
-    body: { street, number, neighborhood, city, state, zipCode },
-  });
-
-  if (error) {
-    console.error("Edge function error:", error);
-    return { distanceKm: 0, roundedKm: 0, fee: null, error: "Erro ao calcular distância. Tente novamente." };
+  // Para Corumbá, retorna taxa fixa
+  if (city.toLowerCase() === "corumbá" || city.toLowerCase() === "corumba") {
+    return {
+      distanceKm: 0,
+      roundedKm: 0,
+      fee: FIXED_DELIVERY_FEE,
+    };
   }
 
-  if (data.error) {
-    return { distanceKm: 0, roundedKm: 0, fee: null, error: data.error };
-  }
-
-  const fee = calculateDeliveryFee(data.distanceKm);
+  // Fora de Corumbá, sem entrega
   return {
-    distanceKm: data.distanceKm,
-    roundedKm: data.roundedKm,
-    fee,
+    distanceKm: 0,
+    roundedKm: 0,
+    fee: null,
+    error: "Entrega disponível apenas em Corumbá",
   };
 }

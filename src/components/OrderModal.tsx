@@ -9,6 +9,7 @@ import {
 import { getDeliveryDistance, calculateDeliveryFee } from "@/services/deliveryService";
 import { createPixPayment } from "@/services/paymentService";
 import { createOrder, buildWhatsAppMessage } from "@/services/orderService";
+import { sendWhatsAppViaEvolution } from "@/services/evolutionService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
@@ -30,20 +31,6 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   debito: "💳 Débito (+R$1,00)",
   credito: "💳 Crédito (+R$2,50)",
 };
-
-async function fetchCep(cep: string) {
-  const clean = cep.replace(/\D/g, "");
-  if (clean.length !== 8) return null;
-  try {
-    const { data, error } = await supabase.functions.invoke("lookup-cep", {
-      body: { cep: clean },
-    });
-    if (error || !data || data.error) return null;
-    return data;
-  } catch {
-    return null;
-  }
-}
 
 export default function OrderModal({ onClose }: OrderModalProps) {
   const { items, clearCart } = useCart();
@@ -81,63 +68,41 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const total = calcTotal(totalQty, payment, deliveryFee);
 
   const handleCepChange = async (val: string) => {
-    const formatted = val
-      .replace(/\D/g, "")
-      .replace(/(\d{5})(\d)/, "$1-$2")
-      .slice(0, 9);
-    setCep(formatted);
-    setCepError("");
-    setOutOfRange(false);
-    setDistanceKm(null);
+  const formatted = val
+    .replace(/\D/g, "")
+    .replace(/(\d{5})(\d)/, "$1-$2")
+    .slice(0, 9);
+  setCep(formatted);
+  setCepError("");
+  setOutOfRange(false);
+  setDistanceKm(null);
 
-    if (formatted.replace(/\D/g, "").length === 8) {
-      setCepLoading(true);
-      const data = await fetchCep(formatted);
-      setCepLoading(false);
-      if (data) {
-        setDeliveryInfo({
-          cep: formatted,
-          street: data.logradouro || "",
-          neighborhood: data.bairro || "",
-          city: "Corumbá",
-          state: "MS",
-          deliveryFee: 0,
-        });
-      } else {
-        setDeliveryInfo({});
-        setCepError("CEP não encontrado. Verifique e tente novamente.");
-      }
-    }
-  };
+  // Se preencheu 8 dígitos, assumir que é válido
+  // e colocar um endereço padrão para Corumbá
+  if (formatted.replace(/\D/g, "").length === 8) {
+    setDeliveryInfo({
+      cep: formatted,
+      street: "",
+      neighborhood: "",
+      city: "Corumbá",
+      state: "MS",
+      deliveryFee: 10, // Taxa fixa
+    });
+  }
+};
 
   const calculateFee = useCallback(async () => {
     if (!deliveryInfo.street || !houseNumber.trim() || !deliveryInfo.city) return;
     setDistanceLoading(true);
     setOutOfRange(false);
     setCepError("");
-    const result = await getDeliveryDistance(
-      deliveryInfo.street,
-      houseNumber.trim(),
-      deliveryInfo.neighborhood || "",
-      deliveryInfo.city,
-      deliveryInfo.state || "MS",
-      cep.replace(/\D/g, "")
-    );
+    
+    // Taxa fixa para Corumbá
+    setDistanceKm(0);
+    setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 10 }));
+    
     setDistanceLoading(false);
-    if (result.error) {
-      setCepError(result.error);
-      setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
-      return;
-    }
-    setDistanceKm(result.roundedKm);
-    if (result.fee === null) {
-      setOutOfRange(true);
-      setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
-    } else {
-      setOutOfRange(false);
-      setDeliveryInfo((prev) => ({ ...prev, deliveryFee: result.fee! }));
-    }
-  }, [deliveryInfo.street, deliveryInfo.neighborhood, deliveryInfo.city, deliveryInfo.state, houseNumber, cep]);
+  }, [deliveryInfo.street, houseNumber, cep]);
 
   const handleHouseNumberChange = (val: string) => {
     setHouseNumber(val.replace(/\D/g, ""));
@@ -191,27 +156,34 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     );
   };
 
-  const sendWhatsAppFromServer = async (orderId: string) => {
-    const { data: msgData, error: msgError } = await buildWhatsAppMessage(orderId);
-    if (msgError || !msgData) {
-      console.error("Failed to build WhatsApp message:", msgError);
-      return;
-    }
+ const sendWhatsAppFromServer = async (orderId: string) => {
+  const { data: msgData, error: msgError } = await buildWhatsAppMessage(orderId);
+  if (msgError || !msgData) {
+    console.error("Failed to build WhatsApp message:", msgError);
+    return;
+  }
 
-    window.open(
-      `https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodeURIComponent(msgData.establishmentMessage)}`,
-      "_blank"
-    );
+  // Enviar via Evolution API (SEM EDIÇÃO)
+  const result = await sendWhatsAppViaEvolution(
+    ESTABLISHMENT_PHONE,
+    msgData.establishmentMessage
+  );
 
-    if (msgData.deliveryGroupMessage) {
-      setTimeout(() => {
-        window.open(
-          `https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodeURIComponent(msgData.deliveryGroupMessage!)}`,
-          "_blank"
-        );
-      }, 800);
-    }
-  };
+  if (!result.success) {
+    console.error("Erro ao enviar WhatsApp:", result.error);
+    return;
+  }
+
+  // Enviar segunda mensagem ao grupo de entrega se existir
+  if (msgData.deliveryGroupMessage) {
+    setTimeout(() => {
+      sendWhatsAppViaEvolution(
+        ESTABLISHMENT_PHONE,
+        msgData.deliveryGroupMessage!
+      );
+    }, 1000);
+  }
+};
 
   const [sendLoading, setSendLoading] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
