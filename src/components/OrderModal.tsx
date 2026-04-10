@@ -6,7 +6,7 @@ import {
   calcTotal,
   formatCurrency,
 } from "@/types/order";
-import { getDeliveryDistance, calculateDeliveryFee } from "@/services/deliveryService";
+import { getDeliveryDistance } from "@/services/deliveryService";
 import { createPixPayment } from "@/services/paymentService";
 import { createOrder, buildWhatsAppMessage } from "@/services/orderService";
 import { sendWhatsAppViaEvolution } from "@/services/evolutionService";
