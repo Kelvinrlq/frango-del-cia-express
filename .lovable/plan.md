@@ -1,24 +1,32 @@
 
 
-## Corrigir Erros de Build
+## Corrigir envio WhatsApp via Evolution API
 
-### Problema 1: Import inexistente
-`src/components/OrderModal.tsx` importa `calculateDeliveryFee` de `@/services/deliveryService`, mas essa função não existe no arquivo. O código já não usa essa função (taxa fixa de R$10 é calculada inline).
+### Problema
+A Evolution API é chamada diretamente do navegador do cliente, causando:
+1. **Erro CORS** - o navegador bloqueia a requisição cross-origin
+2. **Sem API Key** - o header `apikey` não é enviado (a key é `kelvin1234`)
+3. **Demora** - Render free tier tem cold start de 30-60s
 
-**Correção**: Remover `calculateDeliveryFee` do import na linha 9 do `OrderModal.tsx`.
-
-### Problema 2: Erro Deno/OpenAI
-Erro de resolução de tipos do `npm:openai@^4.52.5`. Provavelmente um arquivo de tipos do Supabase referenciando OpenAI. Não afeta o build do frontend diretamente — é um erro de tipo do Deno que aparece no linter mas não impede o deploy das edge functions.
+### Solução
+Criar uma Edge Function `send-whatsapp` no Supabase que faz a chamada à Evolution API no servidor, eliminando CORS e protegendo a API key.
 
 ### Alterações
-- **`src/components/OrderModal.tsx` linha 9**: Remover `calculateDeliveryFee` do import (manter apenas `getDeliveryDistance`)
 
-### Código Atual Revisado
-O código já reflete as mudanças feitas no VS Code:
-- Evolution API integrada para envio automático de WhatsApp (sem draft)
-- Taxa fixa de R$10 para Corumbá
-- Fluxo `create-order` → `build-whatsapp-message` → Evolution API funcionando
-- CPF e telefone com máscaras
+**1. Adicionar secret no Supabase**
+- `EVOLUTION_API_KEY` = `kelvin1234`
+- `EVOLUTION_API_URL` = `https://frango-evolution-api.onrender.com`
 
-Após corrigir o build, me diga quais mudanças adicionais você quer fazer.
+**2. Criar `supabase/functions/send-whatsapp/index.ts`**
+- Recebe `{ phone, message }` via POST
+- Lê `EVOLUTION_API_URL` e `EVOLUTION_API_KEY` dos secrets
+- Chama `POST {URL}/message/sendText/frango-delivery` com header `apikey`
+- Retorna sucesso/erro
+
+**3. Atualizar `src/services/evolutionService.ts`**
+- Trocar `fetch` direto pela chamada `supabase.functions.invoke("send-whatsapp")`
+- Remove URL e credenciais do frontend
+
+### Sobre o cold start do Render
+O delay de 30-60s na primeira requisição continuará existindo (limitação do plano gratuito do Render). Opções futuras: cron ping ou plano pago.
 
