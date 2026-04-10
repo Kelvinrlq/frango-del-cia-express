@@ -85,7 +85,7 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
     if (payment_method === "debito") unitPrice += DEBITO_ACRESCIMO;
     if (payment_method === "credito") unitPrice += CREDITO_ACRESCIMO;
 
-    // Calculate delivery fee server-side
+        // Calculate delivery fee server-side (FIXED: R$ 10 for Corumbá)
     let serverDeliveryFee = 0;
     if (order_type === "delivery") {
       if (!delivery_info?.street || !delivery_info?.houseNumber || !delivery_info?.city) {
@@ -95,45 +95,16 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
         );
       }
 
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-      const calcRes = await fetch(`${supabaseUrl}/functions/v1/calculate-delivery`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
-          street: delivery_info.street,
-          number: delivery_info.houseNumber,
-          neighborhood: delivery_info.neighborhood || "",
-          city: delivery_info.city,
-          state: delivery_info.state || "MS",
-          zipCode: delivery_info.cep?.replace(/\D/g, "") || "",
-        }),
-      });
-
-      const calcData = await calcRes.json();
-
-      if (!calcRes.ok || calcData.error) {
+      // Taxa fixa para Corumbá: R$ 10,00
+      if (delivery_info.city.toLowerCase() === "corumbá" || delivery_info.city.toLowerCase() === "corumba") {
+        serverDeliveryFee = 10;
+      } else {
         return new Response(
-          JSON.stringify({ error: calcData.error || "Erro ao calcular taxa de entrega" }),
+          JSON.stringify({ error: "Entrega disponível apenas em Corumbá" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
-      const fee = calculateDeliveryFee(calcData.distanceKm);
-      if (fee === null) {
-        return new Response(
-          JSON.stringify({ error: "Endereço fora da área de cobertura" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      serverDeliveryFee = fee;
     }
-
     const serverTotal = unitPrice * totalQuantity + serverDeliveryFee;
 
     if (Math.abs(serverTotal - Number(total_amount)) > 0.01) {
