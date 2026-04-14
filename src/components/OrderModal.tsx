@@ -17,6 +17,7 @@ import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2, ExternalLin
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
+const DELIVERY_GROUP_ID = "120363423717180111@g.us";
 
 interface OrderModalProps {
   onClose: () => void;
