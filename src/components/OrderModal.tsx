@@ -274,7 +274,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
         return;
       }
 
-      await sendWhatsAppFromServer(orderData.order_id);
+      sendWhatsAppFromServer(orderData.order_id);
       setSendLoading(false);
       setStep("sent");
       clearCart();
@@ -283,7 +283,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
   const handlePixApproved = async () => {
     if (pixData?.order_id) {
-      await sendWhatsAppFromServer(pixData.order_id);
+      sendWhatsAppFromServer(pixData.order_id);
     }
     setStep("sent");
     clearCart();
