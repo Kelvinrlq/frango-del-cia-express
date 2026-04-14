@@ -5,18 +5,7 @@ const corsHeaders = {
 
 const INSTANCE_NAME = "frango-delivery";
 
-async function sendWithTimeout(url: string, options: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55000);
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(timeout);
-    return response;
-  } catch (err) {
-    clearTimeout(timeout);
-    throw err;
-  }
-}
+// No explicit timeout — let the Edge Function's own wall-clock limit handle it
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -46,7 +35,7 @@ Deno.serve(async (req) => {
 
     console.log(`Enviando WhatsApp para ${destination} (grupo: ${isGroup})...`);
 
-    const response = await sendWithTimeout(
+    const response = await fetch(
       `${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`,
       {
         method: "POST",
