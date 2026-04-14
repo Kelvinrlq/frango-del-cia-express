@@ -17,6 +17,7 @@ import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2, ExternalLin
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
+const DELIVERY_GROUP_ID = "120363423717180111@g.us";
 
 interface OrderModalProps {
   onClose: () => void;
@@ -156,33 +157,42 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     );
   };
 
- const sendWhatsAppFromServer = async (orderId: string) => {
-  const { data: msgData, error: msgError } = await buildWhatsAppMessage(orderId);
-  if (msgError || !msgData) {
-    console.error("Failed to build WhatsApp message:", msgError);
-    return;
-  }
+ const sendWhatsAppFromServer = (orderId: string) => {
+  // Fire-and-forget: não bloqueia a UI
+  (async () => {
+    try {
+      const { data: msgData, error: msgError } = await buildWhatsAppMessage(orderId);
+      if (msgError || !msgData) {
+        console.error("Failed to build WhatsApp message:", msgError);
+        return;
+      }
 
-  // Enviar via Evolution API (SEM EDIÇÃO)
-  const result = await sendWhatsAppViaEvolution(
-    ESTABLISHMENT_PHONE,
-    msgData.establishmentMessage
-  );
-
-  if (!result.success) {
-    console.error("Erro ao enviar WhatsApp:", result.error);
-    return;
-  }
-
-  // Enviar segunda mensagem ao grupo de entrega se existir
-  if (msgData.deliveryGroupMessage) {
-    setTimeout(() => {
-      sendWhatsAppViaEvolution(
+      // Enviar para o estabelecimento
+      const result = await sendWhatsAppViaEvolution(
         ESTABLISHMENT_PHONE,
-        msgData.deliveryGroupMessage!
+        msgData.establishmentMessage
       );
-    }, 1000);
-  }
+
+      if (!result.success) {
+        console.error("Erro ao enviar WhatsApp para estabelecimento:", result.error);
+      }
+
+      // Enviar para o grupo de entregadores se for delivery
+      if (msgData.deliveryGroupMessage) {
+        setTimeout(async () => {
+          const groupResult = await sendWhatsAppViaEvolution(
+            DELIVERY_GROUP_ID,
+            msgData.deliveryGroupMessage!
+          );
+          if (!groupResult.success) {
+            console.error("Erro ao enviar WhatsApp para grupo:", groupResult.error);
+          }
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Erro no envio WhatsApp:", err);
+    }
+  })();
 };
 
   const [sendLoading, setSendLoading] = useState(false);
@@ -264,7 +274,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
         return;
       }
 
-      await sendWhatsAppFromServer(orderData.order_id);
+      sendWhatsAppFromServer(orderData.order_id);
       setSendLoading(false);
       setStep("sent");
       clearCart();
@@ -273,7 +283,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
   const handlePixApproved = async () => {
     if (pixData?.order_id) {
-      await sendWhatsAppFromServer(pixData.order_id);
+      sendWhatsAppFromServer(pixData.order_id);
     }
     setStep("sent");
     clearCart();
