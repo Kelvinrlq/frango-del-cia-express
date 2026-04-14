@@ -5,21 +5,17 @@ const corsHeaders = {
 
 const INSTANCE_NAME = "frango-delivery";
 
-async function sendWithRetry(url: string, options: RequestInit, retries = 1): Promise<Response> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 50000);
-      const response = await fetch(url, { ...options, signal: controller.signal });
-      clearTimeout(timeout);
-      return response;
-    } catch (err) {
-      console.error(`Tentativa ${attempt + 1} falhou:`, err);
-      if (attempt === retries) throw err;
-      await new Promise((r) => setTimeout(r, 2000));
-    }
+async function sendWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55000);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeout);
+    return response;
+  } catch (err) {
+    clearTimeout(timeout);
+    throw err;
   }
-  throw new Error("Todas as tentativas falharam");
 }
 
 Deno.serve(async (req) => {
@@ -50,7 +46,7 @@ Deno.serve(async (req) => {
 
     console.log(`Enviando WhatsApp para ${destination} (grupo: ${isGroup})...`);
 
-    const response = await sendWithRetry(
+    const response = await sendWithTimeout(
       `${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`,
       {
         method: "POST",
@@ -80,7 +76,7 @@ Deno.serve(async (req) => {
     console.error("Erro send-whatsapp:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
