@@ -1,32 +1,34 @@
 
 
-## Corrigir envio WhatsApp via Evolution API
+## Envio Automático para Estabelecimento + Grupo de Entregadores
 
-### Problema
-A Evolution API é chamada diretamente do navegador do cliente, causando:
-1. **Erro CORS** - o navegador bloqueia a requisição cross-origin
-2. **Sem API Key** - o header `apikey` não é enviado (a key é `kelvin1234`)
-3. **Demora** - Render free tier tem cold start de 30-60s
+### Situação Atual
+- Mensagens são enviadas via Evolution API (Edge Function `send-whatsapp`)
+- Ambas as mensagens (estabelecimento e entrega) vão para o mesmo número (556793277165)
+- O grupo de entregadores (`120363423717180111@g.us`) não recebe nada
 
-### Solução
-Criar uma Edge Function `send-whatsapp` no Supabase que faz a chamada à Evolution API no servidor, eliminando CORS e protegendo a API key.
+### O que muda
 
-### Alterações
+#### 1. Atualizar `supabase/functions/send-whatsapp/index.ts`
+- Adicionar suporte para enviar mensagens a grupos WhatsApp (IDs `@g.us`)
+- A Evolution API aceita grupo IDs no campo `number` — basta passar o ID do grupo diretamente
+- Detectar automaticamente se o destinatário é grupo (contém `@g.us`) ou número normal
 
-**1. Adicionar secret no Supabase**
-- `EVOLUTION_API_KEY` = `kelvin1234`
-- `EVOLUTION_API_URL` = `https://frango-evolution-api.onrender.com`
+#### 2. Atualizar `src/components/OrderModal.tsx`
+- Na função `sendWhatsAppFromServer`:
+  - Mensagem do estabelecimento → enviar para `556793277165` (como já funciona)
+  - Mensagem de entrega (`deliveryGroupMessage`) → enviar para o grupo `120363423717180111@g.us` em vez do número do estabelecimento
+- Manter o envio 100% automático (sem `wa.me`, sem edição manual)
 
-**2. Criar `supabase/functions/send-whatsapp/index.ts`**
-- Recebe `{ phone, message }` via POST
-- Lê `EVOLUTION_API_URL` e `EVOLUTION_API_KEY` dos secrets
-- Chama `POST {URL}/message/sendText/frango-delivery` com header `apikey`
-- Retorna sucesso/erro
+#### 3. Adicionar timeout + retry na Edge Function
+- Adicionar `AbortController` com timeout de 50s no fetch para a Evolution API
+- 1 retry automático em caso de falha (para lidar com cold start do Render)
 
-**3. Atualizar `src/services/evolutionService.ts`**
-- Trocar `fetch` direto pela chamada `supabase.functions.invoke("send-whatsapp")`
-- Remove URL e credenciais do frontend
+#### 4. Melhorar UX de loading
+- Separar confirmação do pedido do envio do WhatsApp: após `create-order` com sucesso, mostrar tela "Pedido confirmado!" imediatamente
+- Enviar WhatsApp em background (fire-and-forget) para não travar a UI por 2+ minutos
 
-### Sobre o cold start do Render
-O delay de 30-60s na primeira requisição continuará existindo (limitação do plano gratuito do Render). Opções futuras: cron ping ou plano pago.
+### Arquivos alterados
+- `supabase/functions/send-whatsapp/index.ts` — suporte a grupos + retry
+- `src/components/OrderModal.tsx` — enviar para grupo + fire-and-forget
 
