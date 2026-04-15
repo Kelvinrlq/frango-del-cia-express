@@ -21,6 +21,7 @@ interface CreateOrderResponse {
 interface WhatsAppMessageResponse {
   establishmentMessage: string;
   deliveryGroupMessage: string | null;
+  deliveryTelegramMessage: string | null;
   googleMapsLink: string | null;
 }
 

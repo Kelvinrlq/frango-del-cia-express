@@ -9,7 +9,7 @@ import {
 import { getDeliveryDistance } from "@/services/deliveryService";
 import { createPixPayment } from "@/services/paymentService";
 import { createOrder, buildWhatsAppMessage } from "@/services/orderService";
-import { sendWhatsAppViaEvolution } from "@/services/evolutionService";
+import { sendTelegramMessage } from "@/services/telegramService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
@@ -17,7 +17,7 @@ import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2, ExternalLin
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
-const DELIVERY_GROUP_ID = "120363423717180111@g.us";
+const TELEGRAM_DELIVERY_GROUP_ID = "-1002036342371"; // ID do grupo Telegram dos entregadores
 
 interface OrderModalProps {
   onClose: () => void;
@@ -169,14 +169,15 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       const encodedMsg = encodeURIComponent(msgData.establishmentMessage);
       window.open(`https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodedMsg}`, "_blank");
 
-      // Enviar automaticamente para o grupo de entregadores via Evolution API (fire-and-forget)
-      if (msgData.deliveryGroupMessage) {
-        sendWhatsAppViaEvolution(DELIVERY_GROUP_ID, msgData.deliveryGroupMessage).then((res) => {
-          if (!res.success) console.error("Erro ao enviar para grupo:", res.error);
-        }).catch((err) => console.error("Erro envio grupo:", err));
+      // Enviar automaticamente para o grupo de entregadores via Telegram (fire-and-forget)
+      if (msgData.deliveryTelegramMessage) {
+        sendTelegramMessage(TELEGRAM_DELIVERY_GROUP_ID, msgData.deliveryTelegramMessage).then((res) => {
+          if (!res.success) console.error("Erro ao enviar para grupo Telegram:", res.error);
+          else console.log("Mensagem enviada ao grupo Telegram com sucesso");
+        }).catch((err) => console.error("Erro envio Telegram:", err));
       }
     } catch (err) {
-      console.error("Erro no envio WhatsApp:", err);
+      console.error("Erro no envio:", err);
     }
   };
 
