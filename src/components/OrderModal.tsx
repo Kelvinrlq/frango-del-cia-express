@@ -169,14 +169,15 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       const encodedMsg = encodeURIComponent(msgData.establishmentMessage);
       window.open(`https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodedMsg}`, "_blank");
 
-      // Enviar automaticamente para o grupo de entregadores via Evolution API (fire-and-forget)
-      if (msgData.deliveryGroupMessage) {
-        sendWhatsAppViaEvolution(DELIVERY_GROUP_ID, msgData.deliveryGroupMessage).then((res) => {
-          if (!res.success) console.error("Erro ao enviar para grupo:", res.error);
-        }).catch((err) => console.error("Erro envio grupo:", err));
+      // Enviar automaticamente para o grupo de entregadores via Telegram (fire-and-forget)
+      if (msgData.deliveryTelegramMessage) {
+        sendTelegramMessage(TELEGRAM_DELIVERY_GROUP_ID, msgData.deliveryTelegramMessage).then((res) => {
+          if (!res.success) console.error("Erro ao enviar para grupo Telegram:", res.error);
+          else console.log("Mensagem enviada ao grupo Telegram com sucesso");
+        }).catch((err) => console.error("Erro envio Telegram:", err));
       }
     } catch (err) {
-      console.error("Erro no envio WhatsApp:", err);
+      console.error("Erro no envio:", err);
     }
   };
 
