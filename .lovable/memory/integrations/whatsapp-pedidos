@@ -1,0 +1,20 @@
+---
+name: WhatsApp + Telegram Integration
+description: Establishment via wa.me manual link, delivery group via Telegram Bot connector gateway (free, no cold start)
+type: feature
+---
+## Fluxo de Notificação de Pedidos
+
+### Estabelecimento (WhatsApp manual)
+- Cliente finaliza pedido → abre `wa.me/556793277165` com mensagem pré-formatada
+- Mensagem gerada server-side via Edge Function `build-whatsapp-message`
+
+### Grupo de Entregadores (Telegram automático)
+- Edge Function `send-telegram` envia via connector gateway (`connector-gateway.lovable.dev/telegram/sendMessage`)
+- Formato HTML com links clicáveis do Google Maps
+- Fire-and-forget: não bloqueia a UI do cliente
+- TELEGRAM_DELIVERY_GROUP_ID no OrderModal.tsx precisa do chat_id real do grupo
+
+### Removido
+- Evolution API (send-whatsapp Edge Function) — problemas de cold start no Render
+- evolutionService.ts — substituído por telegramService.ts
