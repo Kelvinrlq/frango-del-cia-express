@@ -9,7 +9,7 @@ import {
 import { getDeliveryDistance } from "@/services/deliveryService";
 import { createPixPayment } from "@/services/paymentService";
 import { createOrder, buildWhatsAppMessage } from "@/services/orderService";
-import { sendWhatsAppViaEvolution } from "@/services/evolutionService";
+import { sendTelegramMessage } from "@/services/telegramService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
@@ -17,7 +17,7 @@ import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2, ExternalLin
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
-const DELIVERY_GROUP_ID = "120363423717180111@g.us";
+const TELEGRAM_DELIVERY_GROUP_ID = "-1002036342371"; // ID do grupo Telegram dos entregadores
 
 interface OrderModalProps {
   onClose: () => void;

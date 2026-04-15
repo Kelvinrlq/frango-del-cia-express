@@ -105,9 +105,12 @@ Deno.serve(async (req) => {
       msg += `\n✅ *Pagamento PIX já confirmado!*`;
     }
 
-    // Build delivery group message (for delivery orders)
+    // Build delivery group message for WhatsApp (kept for compatibility)
     let deliveryGroupMessage: string | null = null;
+    // Build delivery group message for Telegram (HTML format)
+    let deliveryTelegramMessage: string | null = null;
     if (order.order_type === "delivery" && deliveryInfo) {
+      // WhatsApp format
       let gmsg = `📦 *Novo Pedido de Entrega:*\n\n`;
       gmsg += `📦 *Cliente:* ${order.customer_name}\n`;
       gmsg += `📞 *Telefone:* ${order.customer_phone}\n`;
@@ -116,12 +119,24 @@ Deno.serve(async (req) => {
       if (googleMapsLink) gmsg += `🗺️ *Google Maps:* ${googleMapsLink}\n`;
       gmsg += `💰 *Total:* ${formatCurrency(order.total_amount)}`;
       deliveryGroupMessage = gmsg;
+
+      // Telegram HTML format
+      let tmsg = `📦 <b>Novo Pedido de Entrega</b>\n\n`;
+      tmsg += `👤 <b>Cliente:</b> ${order.customer_name}\n`;
+      tmsg += `📞 <b>Telefone:</b> ${order.customer_phone}\n`;
+      tmsg += `📍 <b>Endereço:</b> ${deliveryInfo.street}, ${deliveryInfo.houseNumber}, ${deliveryInfo.neighborhood}\n`;
+      tmsg += `🏘️ <b>Complemento:</b> ${deliveryInfo.complement || "-"}\n`;
+      if (googleMapsLink) tmsg += `🗺️ <a href="${googleMapsLink}">📍 Ver no Google Maps</a>\n`;
+      tmsg += `\n💰 <b>Total:</b> ${formatCurrency(order.total_amount)}`;
+      tmsg += `\n💳 <b>Pagamento:</b> ${PAYMENT_LABELS[paymentMethod] || paymentMethod}`;
+      deliveryTelegramMessage = tmsg;
     }
 
     return new Response(
       JSON.stringify({
         establishmentMessage: msg,
         deliveryGroupMessage,
+        deliveryTelegramMessage,
         googleMapsLink,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
