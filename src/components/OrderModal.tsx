@@ -798,9 +798,9 @@ export default function OrderModal({ onClose }: OrderModalProps) {
             {step === "sent" && (
               <div className="text-center py-8 space-y-4 animate-bounce-in">
                 <div className="text-7xl">🎉</div>
-                <h3 className="font-display text-3xl text-foreground">Pedido Enviado!</h3>
+                <h3 className="font-display text-3xl text-foreground">Pedido Criado!</h3>
                 <p className="text-muted-foreground font-semibold">
-                  Seu pedido foi enviado pelo WhatsApp. Em breve entraremos em contato para confirmar!
+                  O WhatsApp foi aberto com a mensagem do seu pedido. Basta enviar para confirmar! 🍗
                 </p>
                 {payment === "pix" && (
                   <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 text-foreground font-semibold text-sm flex items-center justify-center gap-2">
