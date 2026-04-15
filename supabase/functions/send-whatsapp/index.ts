@@ -35,6 +35,9 @@ Deno.serve(async (req) => {
 
     console.log(`Enviando WhatsApp para ${destination} (grupo: ${isGroup})...`);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     const response = await fetch(
       `${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`,
       {
@@ -47,8 +50,11 @@ Deno.serve(async (req) => {
           number: destination,
           text: message,
         }),
+        signal: controller.signal,
       }
     );
+
+    clearTimeout(timeoutId);
 
     const responseText = await response.text();
     console.log(`Evolution API response: ${response.status} - ${responseText}`);
