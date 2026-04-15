@@ -157,9 +157,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     );
   };
 
- const sendWhatsAppFromServer = (orderId: string) => {
-  // Fire-and-forget: não bloqueia a UI
-  (async () => {
+  const openWhatsAppAndNotifyGroup = async (orderId: string) => {
     try {
       const { data: msgData, error: msgError } = await buildWhatsAppMessage(orderId);
       if (msgError || !msgData) {
@@ -167,33 +165,20 @@ export default function OrderModal({ onClose }: OrderModalProps) {
         return;
       }
 
-      // Enviar para o estabelecimento
-      const result = await sendWhatsAppViaEvolution(
-        ESTABLISHMENT_PHONE,
-        msgData.establishmentMessage
-      );
+      // Abrir wa.me para o cliente enviar manualmente ao estabelecimento
+      const encodedMsg = encodeURIComponent(msgData.establishmentMessage);
+      window.open(`https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodedMsg}`, "_blank");
 
-      if (!result.success) {
-        console.error("Erro ao enviar WhatsApp para estabelecimento:", result.error);
-      }
-
-      // Enviar para o grupo de entregadores se for delivery
+      // Enviar automaticamente para o grupo de entregadores via Evolution API (fire-and-forget)
       if (msgData.deliveryGroupMessage) {
-        setTimeout(async () => {
-          const groupResult = await sendWhatsAppViaEvolution(
-            DELIVERY_GROUP_ID,
-            msgData.deliveryGroupMessage!
-          );
-          if (!groupResult.success) {
-            console.error("Erro ao enviar WhatsApp para grupo:", groupResult.error);
-          }
-        }, 2000);
+        sendWhatsAppViaEvolution(DELIVERY_GROUP_ID, msgData.deliveryGroupMessage).then((res) => {
+          if (!res.success) console.error("Erro ao enviar para grupo:", res.error);
+        }).catch((err) => console.error("Erro envio grupo:", err));
       }
     } catch (err) {
       console.error("Erro no envio WhatsApp:", err);
     }
-  })();
-};
+  };
 
   const [sendLoading, setSendLoading] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
