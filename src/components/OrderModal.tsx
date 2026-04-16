@@ -13,7 +13,7 @@ import { sendTelegramMessage } from "@/services/telegramService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
-import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2, ExternalLink } from "lucide-react";
+import { X, MapPin, Clock, User, ChevronRight, AlertCircle } from "lucide-react";
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
