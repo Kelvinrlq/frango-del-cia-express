@@ -97,6 +97,20 @@ export default {
           "0%, 100%": { transform: "rotate(-3deg)" },
           "50%": { transform: "rotate(3deg)" },
         },
+        "pulse-cta": {
+          "0%, 100%": {
+            transform: "scale(1)",
+            boxShadow: "0 4px 14px 0 hsl(43 96% 40% / 0.4)",
+          },
+          "50%": {
+            transform: "scale(1.03)",
+            boxShadow: "0 8px 28px 0 hsl(43 96% 40% / 0.6)",
+          },
+        },
+        shine: {
+          "0%": { transform: "translateX(-100%) skewX(-20deg)" },
+          "100%": { transform: "translateX(200%) skewX(-20deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -105,6 +119,8 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "bounce-in": "bounce-in 0.4s ease-out",
         wiggle: "wiggle 0.5s ease-in-out",
+        "pulse-cta": "pulse-cta 1.8s ease-in-out infinite",
+        shine: "shine 2.5s ease-in-out infinite",
       },
     },
   },
