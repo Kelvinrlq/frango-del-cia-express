@@ -89,4 +89,17 @@
   .shadow-button {
     box-shadow: var(--shadow-button);
   }
+  .cta-attention {
+    @apply relative overflow-hidden animate-pulse-cta;
+  }
+  .cta-attention::before {
+    content: "";
+    @apply absolute top-0 left-0 h-full w-1/3 pointer-events-none animate-shine;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(0 0% 100% / 0.45),
+      transparent
+    );
+  }
 }
