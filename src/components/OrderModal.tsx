@@ -69,28 +69,58 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const total = calcTotal(totalQty, payment, deliveryFee);
 
   const handleCepChange = async (val: string) => {
-  const formatted = val
-    .replace(/\D/g, "")
-    .replace(/(\d{5})(\d)/, "$1-$2")
-    .slice(0, 9);
-  setCep(formatted);
-  setCepError("");
-  setOutOfRange(false);
-  setDistanceKm(null);
+    const formatted = val
+      .replace(/\D/g, "")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .slice(0, 9);
+    setCep(formatted);
+    setCepError("");
+    setOutOfRange(false);
+    setDistanceKm(null);
 
-  // Se preencheu 8 dígitos, assumir que é válido
-  // e colocar um endereço padrão para Corumbá
-  if (formatted.replace(/\D/g, "").length === 8) {
-    setDeliveryInfo({
-      cep: formatted,
-      street: "",
-      neighborhood: "",
-      city: "Corumbá",
-      state: "MS",
-      deliveryFee: 10, // Taxa fixa
-    });
-  }
-};
+    const digits = formatted.replace(/\D/g, "");
+    if (digits.length === 8) {
+      setCepLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("lookup-cep", {
+          body: { cep: digits },
+        });
+        if (error || !data || data.error) {
+          // Mesmo se falhar, permite preenchimento manual
+          setDeliveryInfo({
+            cep: formatted,
+            street: "",
+            neighborhood: "",
+            city: "Corumbá",
+            state: "MS",
+            deliveryFee: 10,
+          });
+          setCepError(data?.error || "Não foi possível buscar o CEP, preencha manualmente.");
+        } else {
+          setDeliveryInfo({
+            cep: formatted,
+            street: data.logradouro || "",
+            neighborhood: data.bairro || "",
+            city: "Corumbá",
+            state: "MS",
+            deliveryFee: 10,
+          });
+        }
+      } catch {
+        setDeliveryInfo({
+          cep: formatted,
+          street: "",
+          neighborhood: "",
+          city: "Corumbá",
+          state: "MS",
+          deliveryFee: 10,
+        });
+        setCepError("Erro ao buscar CEP, preencha manualmente.");
+      } finally {
+        setCepLoading(false);
+      }
+    }
+  };
 
   const calculateFee = useCallback(async () => {
     if (!deliveryInfo.street || !houseNumber.trim() || !deliveryInfo.city) return;
