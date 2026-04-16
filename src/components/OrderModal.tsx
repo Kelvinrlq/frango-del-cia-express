@@ -164,7 +164,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       cep.replace(/\D/g, "").length === 8 &&
       !outOfRange &&
       (deliveryInfo.deliveryFee ?? 0) > 0 &&
-      !distanceLoading &&
+      !cepLoading &&
       isPhoneEmailValid
     );
   };
