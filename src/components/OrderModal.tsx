@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import {
   PaymentMethod,
@@ -6,14 +6,13 @@ import {
   calcTotal,
   formatCurrency,
 } from "@/types/order";
-import { getDeliveryDistance } from "@/services/deliveryService";
 import { createPixPayment } from "@/services/paymentService";
 import { createOrder, buildWhatsAppMessage } from "@/services/orderService";
 import { sendTelegramMessage } from "@/services/telegramService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
-import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2, ExternalLink } from "lucide-react";
+import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
@@ -45,9 +44,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [deliveryInfo, setDeliveryInfo] = useState<Partial<DeliveryInfo>>({});
   const [houseNumber, setHouseNumber] = useState("");
   const [complement, setComplement] = useState("");
-  const [distanceLoading, setDistanceLoading] = useState(false);
   const [outOfRange, setOutOfRange] = useState(false);
-  const [distanceKm, setDistanceKm] = useState<number | null>(null);
 
   // Pickup state
   const [pickupName, setPickupName] = useState("");
@@ -69,47 +66,62 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const total = calcTotal(totalQty, payment, deliveryFee);
 
   const handleCepChange = async (val: string) => {
-  const formatted = val
-    .replace(/\D/g, "")
-    .replace(/(\d{5})(\d)/, "$1-$2")
-    .slice(0, 9);
-  setCep(formatted);
-  setCepError("");
-  setOutOfRange(false);
-  setDistanceKm(null);
-
-  // Se preencheu 8 dígitos, assumir que é válido
-  // e colocar um endereço padrão para Corumbá
-  if (formatted.replace(/\D/g, "").length === 8) {
-    setDeliveryInfo({
-      cep: formatted,
-      street: "",
-      neighborhood: "",
-      city: "Corumbá",
-      state: "MS",
-      deliveryFee: 10, // Taxa fixa
-    });
-  }
-};
-
-  const calculateFee = useCallback(async () => {
-    if (!deliveryInfo.street || !houseNumber.trim() || !deliveryInfo.city) return;
-    setDistanceLoading(true);
-    setOutOfRange(false);
+    const formatted = val
+      .replace(/\D/g, "")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .slice(0, 9);
+    setCep(formatted);
     setCepError("");
+    setOutOfRange(false);
     
-    // Taxa fixa para Corumbá
-    setDistanceKm(0);
-    setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 10 }));
-    
-    setDistanceLoading(false);
-  }, [deliveryInfo.street, houseNumber, cep]);
+
+    const digits = formatted.replace(/\D/g, "");
+    if (digits.length === 8) {
+      setCepLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("lookup-cep", {
+          body: { cep: digits },
+        });
+        if (error || !data || data.error) {
+          // Mesmo se falhar, permite preenchimento manual
+          setDeliveryInfo({
+            cep: formatted,
+            street: "",
+            neighborhood: "",
+            city: "Corumbá",
+            state: "MS",
+            deliveryFee: 10,
+          });
+          setCepError(data?.error || "Não foi possível buscar o CEP, preencha manualmente.");
+        } else {
+          setDeliveryInfo({
+            cep: formatted,
+            street: data.logradouro || "",
+            neighborhood: data.bairro || "",
+            city: "Corumbá",
+            state: "MS",
+            deliveryFee: 10,
+          });
+        }
+      } catch {
+        setDeliveryInfo({
+          cep: formatted,
+          street: "",
+          neighborhood: "",
+          city: "Corumbá",
+          state: "MS",
+          deliveryFee: 10,
+        });
+        setCepError("Erro ao buscar CEP, preencha manualmente.");
+      } finally {
+        setCepLoading(false);
+      }
+    }
+  };
 
   const handleHouseNumberChange = (val: string) => {
     setHouseNumber(val.replace(/\D/g, ""));
     setOutOfRange(false);
-    setDistanceKm(null);
-    setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
   };
 
   const handleCpfChange = (val: string) => {
@@ -152,7 +164,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       cep.replace(/\D/g, "").length === 8 &&
       !outOfRange &&
       (deliveryInfo.deliveryFee ?? 0) > 0 &&
-      !distanceLoading &&
+      !cepLoading &&
       isPhoneEmailValid
     );
   };
@@ -555,42 +567,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       </div>
                     </div>
 
-                    {deliveryInfo.street && houseNumber.trim() && (
-                      <button
-                        onClick={calculateFee}
-                        disabled={distanceLoading}
-                        className="w-full py-3 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {distanceLoading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Calculando distância...
-                          </>
-                        ) : (
-                          "📍 Calcular Taxa de Entrega"
-                        )}
-                      </button>
-                    )}
-
-                    {(deliveryInfo.deliveryFee ?? 0) > 0 && distanceKm !== null && (
+                    {(deliveryInfo.deliveryFee ?? 0) > 0 && (
                       <div className="bg-muted border border-primary/30 rounded-xl p-3 text-sm">
-                        <p className="text-muted-foreground">Distância: {distanceKm} km</p>
-                        <p className="text-primary font-bold text-lg mt-1">
+                        <p className="text-primary font-bold text-lg">
                           🛵 Taxa de entrega: {formatCurrency(deliveryInfo.deliveryFee ?? 0)}
                         </p>
                       </div>
-                    )}
-
-                    {deliveryInfo.street && houseNumber.trim() && deliveryInfo.neighborhood && (
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-primary font-semibold hover:underline"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Ver endereço no Google Maps
-                      </a>
                     )}
 
                     {outOfRange && (
