@@ -17,7 +17,7 @@ import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2, ExternalLin
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
-const TELEGRAM_DELIVERY_GROUP_ID = "-1002036342371"; // ID do grupo Telegram dos entregadores
+const TELEGRAM_DELIVERY_GROUP_ID = "-5292514760"; // ID do grupo Telegram dos entregadores
 
 interface OrderModalProps {
   onClose: () => void;
