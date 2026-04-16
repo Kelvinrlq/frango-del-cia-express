@@ -77,10 +77,10 @@ export default function ProductCard() {
           className={`mt-4 w-full py-5 rounded-xl font-display text-2xl font-black transition-all shadow-button ${
             added
               ? "bg-green-500 text-white scale-95"
-              : "gradient-hero text-secondary hover:opacity-90"
+              : "gradient-hero text-secondary hover:opacity-90 cta-attention"
           }`}
         >
-          {added ? "✓ Adicionado!" : "Adicionar ao Pedido"}
+          {added ? "✓ Adicionado!" : "👉 Adicionar ao Pedido"}
         </button>
       </div>
 
