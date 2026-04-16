@@ -73,7 +73,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     setCep(formatted);
     setCepError("");
     setOutOfRange(false);
-    setDistanceKm(null);
+    
 
     const digits = formatted.replace(/\D/g, "");
     if (digits.length === 8) {
