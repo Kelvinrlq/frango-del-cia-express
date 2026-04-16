@@ -138,16 +138,9 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
 
     // MELHOR LOGGING DO ERRO
     if (orderError) {
-      console.error("Order insert error:", orderError);
-      console.error("Error message:", orderError?.message);
-      console.error("Error code:", orderError?.code);
-      console.error("Error details:", JSON.stringify(orderError, null, 2));
-      
+      console.error("Order insert error:", JSON.stringify(orderError, null, 2));
       return new Response(
-        JSON.stringify({ 
-          error: "Erro ao criar pedido",
-          details: orderError?.message // Retorna detalhes do erro para debug
-        }),
+        JSON.stringify({ error: "Erro ao criar pedido" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
