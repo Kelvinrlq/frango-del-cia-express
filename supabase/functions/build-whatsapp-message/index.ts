@@ -121,7 +121,8 @@ Deno.serve(async (req) => {
       deliveryGroupMessage = gmsg;
 
       // Telegram HTML format
-      let tmsg = `📦 <b>Novo Pedido de Entrega</b>\n\n`;
+      const orderNum = order.order_number ? `#${order.order_number}` : "";
+      let tmsg = `📦 <b>PEDIDO ${orderNum} — Novo Pedido de Entrega</b>\n\n`;
       tmsg += `👤 <b>Cliente:</b> ${order.customer_name}\n`;
       tmsg += `📞 <b>Telefone:</b> ${order.customer_phone}\n`;
       tmsg += `📍 <b>Endereço:</b> ${deliveryInfo.street}, ${deliveryInfo.houseNumber}, ${deliveryInfo.neighborhood}\n`;
