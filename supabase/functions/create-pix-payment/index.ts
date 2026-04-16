@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calculate delivery fee server-side
+    // Calculate delivery fee server-side (fixed for Corumbá-MS)
     let serverDeliveryFee = 0;
     if (order_type === "delivery") {
       if (!delivery_info?.street || !delivery_info?.houseNumber || !delivery_info?.city) {
@@ -90,46 +90,16 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Call calculate-delivery edge function internally
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-      const calcRes = await fetch(`${supabaseUrl}/functions/v1/calculate-delivery`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
-          street: delivery_info.street,
-          number: delivery_info.houseNumber,
-          neighborhood: delivery_info.neighborhood || "",
-          city: delivery_info.city,
-          state: delivery_info.state || "MS",
-          zipCode: delivery_info.cep?.replace(/\D/g, "") || "",
-        }),
-      });
-
-      const calcData = await calcRes.json();
-
-      if (!calcRes.ok || calcData.error) {
-        console.error("Delivery calculation failed:", calcData);
+      const cityNorm = String(delivery_info.city).toLowerCase().trim();
+      if (cityNorm !== "corumbá" && cityNorm !== "corumba") {
         return new Response(
-          JSON.stringify({ error: calcData.error || "Erro ao calcular taxa de entrega" }),
+          JSON.stringify({ error: "Entrega disponível apenas em Corumbá-MS" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const fee = calculateDeliveryFee(calcData.distanceKm);
-      if (fee === null) {
-        return new Response(
-          JSON.stringify({ error: "Endereço fora da área de cobertura" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      serverDeliveryFee = fee;
-      console.log(`Server-calculated delivery fee: R$${fee} (distance: ${calcData.distanceKm}km)`);
+      serverDeliveryFee = FIXED_DELIVERY_FEE;
+      console.log(`Server delivery fee (fixed): R$${serverDeliveryFee}`);
     }
 
     const serverTotal = FRANGO_PRICE * totalQuantity + serverDeliveryFee;
