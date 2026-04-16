@@ -73,7 +73,8 @@ Deno.serve(async (req) => {
         : "pix";
 
     // Build establishment message
-    let msg = `🍗 *NOVO PEDIDO — Casa do Frango Assado da 21*\n\n`;
+    const orderNumberLabel = order.order_number ? `#${order.order_number}` : "";
+    let msg = `🍗 *NOVO PEDIDO ${orderNumberLabel} — Casa do Frango Assado da 21*\n\n`;
     msg += `📋 *Itens:*\n${itemLines}\n\n`;
 
     let googleMapsLink: string | null = null;
