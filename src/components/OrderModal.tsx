@@ -731,7 +731,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   <button
                     onClick={handleSend}
                     disabled={pixLoading || sendLoading}
-                    className="flex-1 gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity disabled:opacity-50 disabled:animate-none flex items-center justify-center gap-2 cta-attention"
                   >
                     {pixLoading ? (
                       <>
@@ -744,7 +744,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                         Enviando...
                       </>
                     ) : (
-                      "Enviar Pedido 🍗"
+                      "👉 Enviar Pedido 🍗"
                     )}
                   </button>
                 </div>
