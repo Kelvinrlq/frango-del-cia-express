@@ -44,9 +44,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [deliveryInfo, setDeliveryInfo] = useState<Partial<DeliveryInfo>>({});
   const [houseNumber, setHouseNumber] = useState("");
   const [complement, setComplement] = useState("");
-  const [distanceLoading, setDistanceLoading] = useState(false);
   const [outOfRange, setOutOfRange] = useState(false);
-  const [distanceKm, setDistanceKm] = useState<number | null>(null);
 
   // Pickup state
   const [pickupName, setPickupName] = useState("");
