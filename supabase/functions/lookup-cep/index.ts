@@ -19,10 +19,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
-    const data = await res.json();
+    const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`, {
+      headers: { 'Accept': 'application/json' },
+    });
 
-    if (data.erro) {
+    const text = await res.text();
+    let data: Record<string, unknown> = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (parseErr) {
+      console.error('ViaCEP returned non-JSON:', text.slice(0, 200));
+      return new Response(JSON.stringify({ error: 'CEP não encontrado' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!res.ok || data.erro) {
       return new Response(JSON.stringify({ error: 'CEP não encontrado' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -33,6 +46,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
+    console.error('lookup-cep error:', err);
     return new Response(JSON.stringify({ error: 'Erro ao buscar CEP' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
