@@ -585,42 +585,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                       </div>
                     </div>
 
-                    {deliveryInfo.street && houseNumber.trim() && (
-                      <button
-                        onClick={calculateFee}
-                        disabled={distanceLoading}
-                        className="w-full py-3 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {distanceLoading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Calculando distância...
-                          </>
-                        ) : (
-                          "📍 Calcular Taxa de Entrega"
-                        )}
-                      </button>
-                    )}
-
-                    {(deliveryInfo.deliveryFee ?? 0) > 0 && distanceKm !== null && (
+                    {(deliveryInfo.deliveryFee ?? 0) > 0 && (
                       <div className="bg-muted border border-primary/30 rounded-xl p-3 text-sm">
-                        <p className="text-muted-foreground">Distância: {distanceKm} km</p>
-                        <p className="text-primary font-bold text-lg mt-1">
+                        <p className="text-primary font-bold text-lg">
                           🛵 Taxa de entrega: {formatCurrency(deliveryInfo.deliveryFee ?? 0)}
                         </p>
                       </div>
-                    )}
-
-                    {deliveryInfo.street && houseNumber.trim() && deliveryInfo.neighborhood && (
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deliveryInfo.street}, ${houseNumber}, ${deliveryInfo.neighborhood}, Corumbá, MS`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-primary font-semibold hover:underline"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Ver endereço no Google Maps
-                      </a>
                     )}
 
                     {outOfRange && (
