@@ -6,19 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const FEE_TABLE: [number, number][] = [
-  [1.0, 7.0], [1.5, 8.5], [2.0, 9.5], [2.5, 11.0], [3.0, 12.0],
-  [3.5, 13.5], [4.0, 15.0], [4.5, 16.5], [5.0, 18.0], [5.5, 19.5],
-  [6.0, 21.0], [6.5, 22.5], [7.0, 24.0],
-];
+// Fixed delivery fee for Corumbá-MS
+const FIXED_DELIVERY_FEE = 10.0;
 
-function calculateDeliveryFee(distanceKm: number): number | null {
-  const roundedKm = Math.round(distanceKm * 2) / 2;
-  for (const [maxKm, fee] of FEE_TABLE) {
-    if (roundedKm <= maxKm) return fee;
-  }
-  return null;
-}
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
