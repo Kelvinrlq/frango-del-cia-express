@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import {
   PaymentMethod,
@@ -6,7 +6,6 @@ import {
   calcTotal,
   formatCurrency,
 } from "@/types/order";
-import { getDeliveryDistance } from "@/services/deliveryService";
 import { createPixPayment } from "@/services/paymentService";
 import { createOrder, buildWhatsAppMessage } from "@/services/orderService";
 import { sendTelegramMessage } from "@/services/telegramService";
