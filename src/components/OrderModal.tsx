@@ -121,24 +121,9 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     }
   };
 
-  const calculateFee = useCallback(async () => {
-    if (!deliveryInfo.street || !houseNumber.trim() || !deliveryInfo.city) return;
-    setDistanceLoading(true);
-    setOutOfRange(false);
-    setCepError("");
-    
-    // Taxa fixa para Corumbá
-    setDistanceKm(0);
-    setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 10 }));
-    
-    setDistanceLoading(false);
-  }, [deliveryInfo.street, houseNumber, cep]);
-
   const handleHouseNumberChange = (val: string) => {
     setHouseNumber(val.replace(/\D/g, ""));
     setOutOfRange(false);
-    setDistanceKm(null);
-    setDeliveryInfo((prev) => ({ ...prev, deliveryFee: 0 }));
   };
 
   const handleCpfChange = (val: string) => {
