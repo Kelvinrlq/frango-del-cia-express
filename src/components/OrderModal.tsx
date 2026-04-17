@@ -811,22 +811,52 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
             {/* SENT */}
             {step === "sent" && (
-              <div className="text-center py-8 space-y-4 animate-bounce-in">
-                <div className="text-7xl">🎉</div>
+              <div className="text-center py-6 space-y-4 animate-bounce-in">
+                <div className="text-6xl">🎉</div>
                 <h3 className="font-display text-3xl text-foreground">Pedido Criado!</h3>
-                <p className="text-muted-foreground font-semibold">
-                  O WhatsApp foi aberto com a mensagem do seu pedido. Basta enviar para confirmar! 🍗
-                </p>
-                {payment === "pix" && (
-                  <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 text-foreground font-semibold text-sm flex items-center justify-center gap-2">
-                    ✅ Pagamento PIX confirmado com sucesso!
+
+                {sentDailyNumber !== null && (
+                  <div className="bg-primary/10 border-2 border-primary rounded-xl p-4">
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide">Seu pedido</p>
+                    <p className="font-display text-4xl text-primary">#{sentDailyNumber}</p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      Total: {formatCurrency(sentOrderTotal)}
+                    </p>
                   </div>
                 )}
+
+                {payment === "pix" && (
+                  <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 text-foreground font-semibold text-sm flex items-center justify-center gap-2">
+                    ✅ Pagamento PIX confirmado!
+                  </div>
+                )}
+
+                <p className="text-foreground font-semibold text-base">
+                  📱 Toque no botão abaixo para <strong>avisar o estabelecimento pelo WhatsApp</strong>:
+                </p>
+
+                {whatsAppUrl ? (
+                  <a
+                    href={whatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full bg-[#25D366] text-white font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity"
+                  >
+                    📱 Abrir WhatsApp
+                  </a>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Carregando mensagem...</p>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Se o WhatsApp não abrir, ligue para <strong>(67) 9327-7165</strong> e informe o número do pedido acima.
+                </p>
+
                 <button
                   onClick={onClose}
-                  className="gradient-hero text-secondary font-display text-xl px-8 py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity"
+                  className="w-full py-3 rounded-xl border-2 border-border text-foreground font-bold hover:bg-muted transition-colors"
                 >
-                  Fazer novo pedido
+                  Fechar
                 </button>
               </div>
             )}
