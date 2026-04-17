@@ -1,63 +1,49 @@
 
 
-## Plano: Telegram Bot para Grupo de Entregadores + Google Maps
+## Plano: Numeração diária + Painel admin + Corrigir WhatsApp
 
-### Resumo
-- Cliente finaliza pedido → abre `wa.me` para enviar mensagem ao estabelecimento (manual)
-- Para pedidos de entrega → sistema envia **automaticamente** para o grupo de entregadores no **Telegram** (gratuito, sem cold start)
-- A mensagem inclui o **link clicável do Google Maps** com o endereço do cliente
+### Problema 1 — Pedido marcou #35 no primeiro do dia
+A coluna `order_number` é uma sequência global que nunca zera. Vou trocar para **numeração diária**: cada dia começa em #1.
 
-### Fluxo
+**Solução técnica:**
+- Adicionar coluna `daily_order_number` (int) e `order_date` (date) na tabela `orders`.
+- Criar função `get_next_daily_order_number()` que faz `MAX(daily_order_number) + 1 WHERE order_date = CURRENT_DATE` — retorna 1 se não houver pedidos hoje.
+- Trigger `BEFORE INSERT` preenche `order_date = CURRENT_DATE` e `daily_order_number` automaticamente.
+- Atualizar `build-whatsapp-message` para usar `daily_order_number` no lugar de `order_number` na mensagem do Telegram (formato continua `PEDIDO #1`, `#2`, `#3`...).
+- Manter `order_number` antiga no banco (não remover) para não quebrar nada.
 
-```text
-Cliente finaliza pedido
-  ├─→ Abre wa.me/556793277165 (estabelecimento, manual)
-  └─→ Se entrega: Edge Function envia para Telegram (automático)
-        └─→ Mensagem com endereço + link Google Maps clicável
-```
+### Problema 2 — WhatsApp não abriu após finalizar pedido
+**Causa:** `window.open()` é chamado dentro de `openWhatsAppAndNotifyGroup()` que roda DEPOIS do `await createOrder()`. Em navegadores mobile, `window.open` só funciona se chamado **sincronamente dentro do clique do usuário** — após um `await`, o navegador bloqueia como popup.
 
-### O que muda no código
+**Solução técnica:**
+- Na tela de sucesso (`step === "sent"`), mostrar um **botão grande "📱 Abrir WhatsApp"** que o cliente clica manualmente. Esse clique é gesto direto do usuário → `window.open` funciona em qualquer navegador.
+- Guardar a mensagem do WhatsApp em estado (`useState<string>`) após o pedido ser criado, para o botão usar.
+- Também mostrar o resumo do pedido na tela de sucesso (número, total, itens) para o cliente saber o que foi pedido mesmo sem abrir o WhatsApp.
+- Telegram continua sendo enviado automático em background (já funciona).
 
-#### 1. Conectar Telegram Bot via connector
-- Usar `standard_connectors--connect` para configurar o Telegram
-- Você precisará criar um bot no Telegram via @BotFather e me passar o token
+### Problema 3 — Painel admin no site para ver pedidos
+Página `/admin` protegida por senha simples (sem necessidade de criar conta de usuário) para a dona ver todos os pedidos em tempo real.
 
-#### 2. Nova Edge Function `send-telegram/index.ts`
-- Recebe `message` e `chat_id`
-- Envia via gateway (`connector-gateway.lovable.dev/telegram/sendMessage`)
-- Usa `parse_mode: 'HTML'` para formatação (negrito, links clicáveis)
-- Timeout nativo do Telegram: resposta em <1s
+**Solução técnica:**
+- Criar rota `/admin` com tela de login simples: campo de senha comparado com uma senha fixa armazenada no `localStorage` após validação inicial. Senha definida via secret/constante (você me passa a senha desejada ou eu gero uma padrão).
+- Após login, página lista pedidos da tabela `orders` ordenados por `created_at DESC`, com:
+  - Número do dia (#1, #2...)
+  - Nome, telefone do cliente
+  - Tipo (entrega/retirada), endereço
+  - Itens, total, forma de pagamento
+  - Status (pendente, pago, etc.)
+  - Link "Ver no Maps" se for entrega
+  - Botão "Abrir no WhatsApp" para responder ao cliente
+- Atualização em tempo real usando Supabase Realtime — pedidos novos aparecem sem precisar atualizar a página.
+- RLS: criar policy de SELECT autorizada apenas com chave anon (já é o padrão público), mas a tela só mostra após senha correta no client. Para algo mais robusto depois, podemos migrar para auth real.
 
-#### 3. Atualizar `build-whatsapp-message/index.ts`
-- Adicionar campo `deliveryTelegramMessage` no retorno
-- Formatado em HTML do Telegram (em vez de Markdown do WhatsApp)
-- Incluir link Google Maps clicável: `<a href="URL">📍 Ver no mapa</a>`
+### Arquivos a alterar
+- `supabase/migrations/...` — coluna `daily_order_number`, `order_date`, função e trigger.
+- `supabase/functions/build-whatsapp-message/index.ts` — usar `daily_order_number`.
+- `src/components/OrderModal.tsx` — botão manual "Abrir WhatsApp" na tela de sucesso, guardar mensagem em estado.
+- `src/pages/Admin.tsx` (novo) — painel de pedidos com login por senha + realtime.
+- `src/App.tsx` — adicionar rota `/admin`.
 
-#### 4. Atualizar `OrderModal.tsx`
-- Após criar pedido: abrir `wa.me` para estabelecimento
-- Se entrega: chamar `send-telegram` em background (fire-and-forget)
-- Remover toda referência à Evolution API
-
-#### 5. Criar `src/services/telegramService.ts`
-- Substituir `evolutionService.ts`
-- Função simples que invoca a Edge Function `send-telegram`
-
-#### 6. Limpeza
-- Remover `send-whatsapp` Edge Function
-- Remover `evolutionService.ts`
-- Remover secrets `EVOLUTION_API_URL` e `EVOLUTION_API_KEY` (opcional)
-
-### O que você precisa fazer (1-2 minutos)
-1. Abrir Telegram → pesquisar **@BotFather** → `/newbot` → dar um nome → copiar o **token**
-2. Criar um **grupo no Telegram** para os entregadores
-3. Adicionar o bot ao grupo
-4. Me passar o **token do bot** e o **chat_id do grupo** (eu te ajudo a descobrir o chat_id)
-
-### Arquivos
-- **Novo**: `supabase/functions/send-telegram/index.ts`
-- **Novo**: `src/services/telegramService.ts`
-- **Editado**: `supabase/functions/build-whatsapp-message/index.ts`
-- **Editado**: `src/components/OrderModal.tsx`
-- **Removido**: `supabase/functions/send-whatsapp/index.ts`
-- **Removido**: `src/services/evolutionService.ts`
+### Pergunta antes de implementar
+Qual senha você quer para o painel admin? Sugiro `frango21` (simples de lembrar). Se preferir outra, me avise — caso contrário uso essa.
 
