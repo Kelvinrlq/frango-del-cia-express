@@ -72,8 +72,9 @@ Deno.serve(async (req) => {
         ? "pix"
         : "pix";
 
-    // Build establishment message
-    const orderNumberLabel = order.order_number ? `#${order.order_number}` : "";
+    // Build establishment message — use daily order number (resets every day)
+    const displayNumber = order.daily_order_number ?? order.order_number;
+    const orderNumberLabel = displayNumber ? `#${displayNumber}` : "";
     let msg = `🍗 *NOVO PEDIDO ${orderNumberLabel} — Casa do Frango Assado da 21*\n\n`;
     msg += `📋 *Itens:*\n${itemLines}\n\n`;
 
