@@ -175,27 +175,45 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     );
   };
 
-  const openWhatsAppAndNotifyGroup = async (orderId: string) => {
+  const prepareWhatsAppAndNotifyGroup = async (orderId: string): Promise<string | null> => {
     try {
       const { data: msgData, error: msgError } = await buildWhatsAppMessage(orderId);
       if (msgError || !msgData) {
         console.error("Failed to build WhatsApp message:", msgError);
-        return;
+        return null;
       }
 
-      // Abrir wa.me para o cliente enviar manualmente ao estabelecimento
+      // Build wa.me URL — user will open via manual button (mobile-safe)
       const encodedMsg = encodeURIComponent(msgData.establishmentMessage);
-      window.open(`https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodedMsg}`, "_blank");
+      const url = `https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodedMsg}`;
 
-      // Enviar automaticamente para o grupo de entregadores via Telegram (fire-and-forget)
+      // Fire-and-forget Telegram notification to delivery group
       if (msgData.deliveryTelegramMessage) {
-        sendTelegramMessage(TELEGRAM_DELIVERY_GROUP_ID, msgData.deliveryTelegramMessage).then((res) => {
-          if (!res.success) console.error("Erro ao enviar para grupo Telegram:", res.error);
-          else console.log("Mensagem enviada ao grupo Telegram com sucesso");
-        }).catch((err) => console.error("Erro envio Telegram:", err));
+        sendTelegramMessage(TELEGRAM_DELIVERY_GROUP_ID, msgData.deliveryTelegramMessage)
+          .then((res) => {
+            if (!res.success) console.error("Erro ao enviar para grupo Telegram:", res.error);
+            else console.log("Mensagem enviada ao grupo Telegram com sucesso");
+          })
+          .catch((err) => console.error("Erro envio Telegram:", err));
       }
+
+      return url;
     } catch (err) {
       console.error("Erro no envio:", err);
+      return null;
+    }
+  };
+
+  const fetchDailyNumber = async (orderId: string) => {
+    try {
+      const { data } = await supabase
+        .from("orders")
+        .select("daily_order_number")
+        .eq("id", orderId)
+        .single();
+      if (data?.daily_order_number) setSentDailyNumber(data.daily_order_number);
+    } catch (err) {
+      console.error("Erro ao buscar número do pedido:", err);
     }
   };
 
