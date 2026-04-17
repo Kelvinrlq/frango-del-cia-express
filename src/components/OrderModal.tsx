@@ -61,6 +61,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
 
+  // Sent screen state
+  const [whatsAppUrl, setWhatsAppUrl] = useState<string | null>(null);
+  const [sentOrderId, setSentOrderId] = useState<string | null>(null);
+  const [sentOrderTotal, setSentOrderTotal] = useState<number>(0);
+  const [sentDailyNumber, setSentDailyNumber] = useState<number | null>(null);
+
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
   const deliveryFee = orderType === "delivery" ? (deliveryInfo.deliveryFee ?? 0) : 0;
   const total = calcTotal(totalQty, payment, deliveryFee);
@@ -169,27 +175,45 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     );
   };
 
-  const openWhatsAppAndNotifyGroup = async (orderId: string) => {
+  const prepareWhatsAppAndNotifyGroup = async (orderId: string): Promise<string | null> => {
     try {
       const { data: msgData, error: msgError } = await buildWhatsAppMessage(orderId);
       if (msgError || !msgData) {
         console.error("Failed to build WhatsApp message:", msgError);
-        return;
+        return null;
       }
 
-      // Abrir wa.me para o cliente enviar manualmente ao estabelecimento
+      // Build wa.me URL — user will open via manual button (mobile-safe)
       const encodedMsg = encodeURIComponent(msgData.establishmentMessage);
-      window.open(`https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodedMsg}`, "_blank");
+      const url = `https://wa.me/${ESTABLISHMENT_PHONE}?text=${encodedMsg}`;
 
-      // Enviar automaticamente para o grupo de entregadores via Telegram (fire-and-forget)
+      // Fire-and-forget Telegram notification to delivery group
       if (msgData.deliveryTelegramMessage) {
-        sendTelegramMessage(TELEGRAM_DELIVERY_GROUP_ID, msgData.deliveryTelegramMessage).then((res) => {
-          if (!res.success) console.error("Erro ao enviar para grupo Telegram:", res.error);
-          else console.log("Mensagem enviada ao grupo Telegram com sucesso");
-        }).catch((err) => console.error("Erro envio Telegram:", err));
+        sendTelegramMessage(TELEGRAM_DELIVERY_GROUP_ID, msgData.deliveryTelegramMessage)
+          .then((res) => {
+            if (!res.success) console.error("Erro ao enviar para grupo Telegram:", res.error);
+            else console.log("Mensagem enviada ao grupo Telegram com sucesso");
+          })
+          .catch((err) => console.error("Erro envio Telegram:", err));
       }
+
+      return url;
     } catch (err) {
       console.error("Erro no envio:", err);
+      return null;
+    }
+  };
+
+  const fetchDailyNumber = async (orderId: string) => {
+    try {
+      const { data } = await supabase
+        .from("orders")
+        .select("daily_order_number")
+        .eq("id", orderId)
+        .single();
+      if (data?.daily_order_number) setSentDailyNumber(data.daily_order_number);
+    } catch (err) {
+      console.error("Erro ao buscar número do pedido:", err);
     }
   };
 
@@ -272,7 +296,11 @@ export default function OrderModal({ onClose }: OrderModalProps) {
         return;
       }
 
-      openWhatsAppAndNotifyGroup(orderData.order_id);
+      const url = await prepareWhatsAppAndNotifyGroup(orderData.order_id);
+      setWhatsAppUrl(url);
+      setSentOrderId(orderData.order_id);
+      setSentOrderTotal(total);
+      fetchDailyNumber(orderData.order_id);
       setSendLoading(false);
       setStep("sent");
       clearCart();
@@ -281,7 +309,11 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
   const handlePixApproved = async () => {
     if (pixData?.order_id) {
-      openWhatsAppAndNotifyGroup(pixData.order_id);
+      const url = await prepareWhatsAppAndNotifyGroup(pixData.order_id);
+      setWhatsAppUrl(url);
+      setSentOrderId(pixData.order_id);
+      setSentOrderTotal(pixData.amount ?? total);
+      fetchDailyNumber(pixData.order_id);
     }
     setStep("sent");
     clearCart();
@@ -779,22 +811,52 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
             {/* SENT */}
             {step === "sent" && (
-              <div className="text-center py-8 space-y-4 animate-bounce-in">
-                <div className="text-7xl">🎉</div>
+              <div className="text-center py-6 space-y-4 animate-bounce-in">
+                <div className="text-6xl">🎉</div>
                 <h3 className="font-display text-3xl text-foreground">Pedido Criado!</h3>
-                <p className="text-muted-foreground font-semibold">
-                  O WhatsApp foi aberto com a mensagem do seu pedido. Basta enviar para confirmar! 🍗
-                </p>
-                {payment === "pix" && (
-                  <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 text-foreground font-semibold text-sm flex items-center justify-center gap-2">
-                    ✅ Pagamento PIX confirmado com sucesso!
+
+                {sentDailyNumber !== null && (
+                  <div className="bg-primary/10 border-2 border-primary rounded-xl p-4">
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide">Seu pedido</p>
+                    <p className="font-display text-4xl text-primary">#{sentDailyNumber}</p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      Total: {formatCurrency(sentOrderTotal)}
+                    </p>
                   </div>
                 )}
+
+                {payment === "pix" && (
+                  <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 text-foreground font-semibold text-sm flex items-center justify-center gap-2">
+                    ✅ Pagamento PIX confirmado!
+                  </div>
+                )}
+
+                <p className="text-foreground font-semibold text-base">
+                  📱 Toque no botão abaixo para <strong>avisar o estabelecimento pelo WhatsApp</strong>:
+                </p>
+
+                {whatsAppUrl ? (
+                  <a
+                    href={whatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full bg-[#25D366] text-white font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity"
+                  >
+                    📱 Abrir WhatsApp
+                  </a>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Carregando mensagem...</p>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Se o WhatsApp não abrir, ligue para <strong>(67) 9327-7165</strong> e informe o número do pedido acima.
+                </p>
+
                 <button
                   onClick={onClose}
-                  className="gradient-hero text-secondary font-display text-xl px-8 py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity"
+                  className="w-full py-3 rounded-xl border-2 border-border text-foreground font-bold hover:bg-muted transition-colors"
                 >
-                  Fazer novo pedido
+                  Fechar
                 </button>
               </div>
             )}

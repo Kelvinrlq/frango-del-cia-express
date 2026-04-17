@@ -20,10 +20,12 @@ export type Database = {
           customer_email: string
           customer_name: string
           customer_phone: string
+          daily_order_number: number | null
           delivery_info: Json | null
           id: string
           items: Json
           notes: string | null
+          order_date: string | null
           order_number: number
           order_type: string
           payment_status: string
@@ -35,10 +37,12 @@ export type Database = {
           customer_email: string
           customer_name: string
           customer_phone: string
+          daily_order_number?: number | null
           delivery_info?: Json | null
           id?: string
           items: Json
           notes?: string | null
+          order_date?: string | null
           order_number?: number
           order_type?: string
           payment_status?: string
@@ -50,10 +54,12 @@ export type Database = {
           customer_email?: string
           customer_name?: string
           customer_phone?: string
+          daily_order_number?: number | null
           delivery_info?: Json | null
           id?: string
           items?: Json
           notes?: string | null
+          order_date?: string | null
           order_number?: number
           order_type?: string
           payment_status?: string

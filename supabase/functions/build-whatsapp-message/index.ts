@@ -72,8 +72,9 @@ Deno.serve(async (req) => {
         ? "pix"
         : "pix";
 
-    // Build establishment message
-    const orderNumberLabel = order.order_number ? `#${order.order_number}` : "";
+    // Build establishment message — use daily order number (resets every day)
+    const displayNumber = order.daily_order_number ?? order.order_number;
+    const orderNumberLabel = displayNumber ? `#${displayNumber}` : "";
     let msg = `🍗 *NOVO PEDIDO ${orderNumberLabel} — Casa do Frango Assado da 21*\n\n`;
     msg += `📋 *Itens:*\n${itemLines}\n\n`;
 
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       deliveryGroupMessage = gmsg;
 
       // Telegram HTML format
-      const orderNum = order.order_number ? `#${order.order_number}` : "";
+      const orderNum = displayNumber ? `#${displayNumber}` : "";
       let tmsg = `📦 <b>PEDIDO ${orderNum} — Novo Pedido de Entrega</b>\n\n`;
       tmsg += `👤 <b>Cliente:</b> ${order.customer_name}\n`;
       tmsg += `📞 <b>Telefone:</b> ${order.customer_phone}\n`;
