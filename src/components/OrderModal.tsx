@@ -61,6 +61,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
 
+  // Sent screen state
+  const [whatsAppUrl, setWhatsAppUrl] = useState<string | null>(null);
+  const [sentOrderId, setSentOrderId] = useState<string | null>(null);
+  const [sentOrderTotal, setSentOrderTotal] = useState<number>(0);
+  const [sentDailyNumber, setSentDailyNumber] = useState<number | null>(null);
+
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
   const deliveryFee = orderType === "delivery" ? (deliveryInfo.deliveryFee ?? 0) : 0;
   const total = calcTotal(totalQty, payment, deliveryFee);
