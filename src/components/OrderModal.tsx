@@ -296,7 +296,11 @@ export default function OrderModal({ onClose }: OrderModalProps) {
         return;
       }
 
-      openWhatsAppAndNotifyGroup(orderData.order_id);
+      const url = await prepareWhatsAppAndNotifyGroup(orderData.order_id);
+      setWhatsAppUrl(url);
+      setSentOrderId(orderData.order_id);
+      setSentOrderTotal(total);
+      fetchDailyNumber(orderData.order_id);
       setSendLoading(false);
       setStep("sent");
       clearCart();
@@ -305,7 +309,11 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
   const handlePixApproved = async () => {
     if (pixData?.order_id) {
-      openWhatsAppAndNotifyGroup(pixData.order_id);
+      const url = await prepareWhatsAppAndNotifyGroup(pixData.order_id);
+      setWhatsAppUrl(url);
+      setSentOrderId(pixData.order_id);
+      setSentOrderTotal(pixData.amount ?? total);
+      fetchDailyNumber(pixData.order_id);
     }
     setStep("sent");
     clearCart();
