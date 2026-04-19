@@ -16,6 +16,7 @@ import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2 } from "luci
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
+const ESTABLISHMENT_EMAIL = "kelvintrp538@gmail.com";
 const TELEGRAM_DELIVERY_GROUP_ID = "-5292514760"; // ID do grupo Telegram dos entregadores
 
 interface OrderModalProps {
@@ -228,7 +229,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       const customerName = orderType === "pickup" ? pickupName : deliveryName;
       const { data, error } = await createPixPayment({
         customer_name: customerName,
-        customer_email: customerEmail,
+        customer_email: ESTABLISHMENT_EMAIL,
         customer_phone: customerPhone.replace(/\D/g, ""),
         customer_cpf: customerCpf.replace(/\D/g, ""),
         total_amount: total,
@@ -267,7 +268,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       const customerName = orderType === "pickup" ? pickupName : deliveryName;
       const { data: orderData, error: orderError } = await createOrder({
         customer_name: customerName,
-        customer_email: customerEmail,
+        customer_email: ESTABLISHMENT_EMAIL,
         customer_phone: customerPhone.replace(/\D/g, ""),
         total_amount: total,
         items: items.map((i) => ({
@@ -640,26 +641,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   )}
                 </div>
 
-                {/* Email - Só mostrar se for PIX */}
-                {payment === "pix" && (
-                  <div>
-                    <label className="block text-sm font-bold text-foreground mb-1">
-                      📧 Email *
-                    </label>
-                    <input
-                      type="email"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      placeholder="seu@email.com"
-                      maxLength={255}
-                      className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    {customerEmail && !isEmailValid && (
-                      <p className="text-xs text-destructive mt-1">Email inválido</p>
-                    )}
-                  </div>
-                )}
-
+      
                 {/* CPF - Só mostrar se for PIX */}
                 {payment === "pix" && (
                   <div>
