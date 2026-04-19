@@ -158,7 +158,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     
     // Se for PIX, exigir email e CPF
     if (payment === "pix") {
-      if (!isEmailValid || !isCpfValid) return false;
+      if (!isCpfValid) return false;
     }
     
     if (orderType === "pickup") {
