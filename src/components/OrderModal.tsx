@@ -95,7 +95,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
             cep: formatted,
             street: "",
             neighborhood: "",
-            city: "Corumbá",
+            city: data.localidade || "Corumbá",
             state: "MS",
             deliveryFee: 10,
           });
@@ -105,7 +105,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
             cep: formatted,
             street: data.logradouro || "",
             neighborhood: data.bairro || "",
-            city: "Corumbá",
+            city: data.localidade || "Corumbá",
             state: "MS",
             deliveryFee: 10,
           });
@@ -569,7 +569,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                             <label className="block text-sm font-bold text-foreground mb-1">Cidade / Estado</label>
                             <input
                               type="text"
-                              value="Corumbá, MS"
+                              value={`${deliveryInfo.city || "Corumbá"}, MS`}
                               disabled
                               className="w-full border border-border rounded-xl px-4 py-3 text-muted-foreground bg-muted font-semibold cursor-not-allowed"
                             />
