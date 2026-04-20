@@ -46,29 +46,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="pb-12 px-4">
-        <div className="container mx-auto max-w-2xl">
-          <h2 className="font-display text-4xl font-black text-foreground text-center mb-6 tracking-tight">Como funciona?</h2>
-          <div className="grid gap-4">
-            {[
-              { icon: "🛒", title: "Escolha a quantidade", desc: "Adicione quantos frangos quiser ao seu pedido." },
-              { icon: "📍", title: "Retirada ou entrega", desc: "Busque no estabelecimento ou receba em casa." },
-              { icon: "💳", title: "Escolha o pagamento", desc: "PIX, dinheiro, débito ou crédito (entrega). Retirada: somente PIX." },
-              { icon: "📲", title: "Pedido confirmado pelo WhatsApp", desc: "Você recebe a confirmação direto no seu WhatsApp." },
-            ].map((step, i) => (
-              <div key={i} className="bg-card rounded-2xl p-5 flex gap-4 items-start shadow-card">
-                <span className="text-4xl">{step.icon}</span>
-                <div>
-                  <p className="font-display text-xl font-bold text-foreground leading-snug">{step.title}</p>
-                  <p className="text-muted-foreground font-semibold text-base mt-1 leading-relaxed">{step.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="bg-secondary text-primary py-6 text-center">
         <p className="font-display text-2xl font-bold">Casa do Frango Assado da 21</p>
