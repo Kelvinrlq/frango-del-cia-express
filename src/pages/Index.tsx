@@ -28,13 +28,6 @@ function HomeContent() {
           <p className="text-secondary/90 font-bold text-xl md:text-2xl max-w-sm leading-relaxed">
             O frango mais gostoso da cidade — assado na hora, direto pra você! 🍗
           </p>
-          <div className="flex gap-3 flex-wrap justify-center mt-2">
-            {["🚚 Entrega", "🏪 Retirada", "💰 Pix • Dinheiro • Cartão"].map((tag) => (
-              <span key={tag} className="bg-secondary/10 text-secondary font-bold text-base md:text-lg px-5 py-2 rounded-full">
-                {tag}
-              </span>
-            ))}
-          </div>
         </div>
       </section>
 
