@@ -63,7 +63,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pixError, setPixError] = useState<string | null>(null);
 
   // Sent screen state
-  const [whatsAppUrl, setWhatsAppUrl] = useState<string | null>(null);
+  
   const [sentOrderId, setSentOrderId] = useState<string | null>(null);
   const [sentOrderTotal, setSentOrderTotal] = useState<number>(0);
   const [sentDailyNumber, setSentDailyNumber] = useState<number | null>(null);
@@ -297,8 +297,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
         return;
       }
 
-      const url = await prepareWhatsAppAndNotifyGroup(orderData.order_id);
-      setWhatsAppUrl(url);
+      prepareWhatsAppAndNotifyGroup(orderData.order_id);
       setSentOrderId(orderData.order_id);
       setSentOrderTotal(total);
       fetchDailyNumber(orderData.order_id);
@@ -310,8 +309,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
   const handlePixApproved = async () => {
     if (pixData?.order_id) {
-      const url = await prepareWhatsAppAndNotifyGroup(pixData.order_id);
-      setWhatsAppUrl(url);
+      prepareWhatsAppAndNotifyGroup(pixData.order_id);
       setSentOrderId(pixData.order_id);
       setSentOrderTotal(pixData.amount ?? total);
       fetchDailyNumber(pixData.order_id);
