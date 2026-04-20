@@ -1,49 +1,35 @@
 
 
-## Plano: Numeração diária + Painel admin + Corrigir WhatsApp
+## Plano: Remover botão "Abrir WhatsApp" da tela de sucesso
 
-### Problema 1 — Pedido marcou #35 no primeiro do dia
-A coluna `order_number` é uma sequência global que nunca zera. Vou trocar para **numeração diária**: cada dia começa em #1.
+### O que muda
+Na tela final ("Pedido Criado!" do `OrderModal.tsx`), remover toda a área circulada em vermelho:
+- O texto "📱 Toque no botão abaixo para avisar o estabelecimento pelo WhatsApp"
+- O botão verde "📱 Abrir WhatsApp"
+- O texto "Se o WhatsApp não abrir, ligue para (67) 9327-7165..."
 
-**Solução técnica:**
-- Adicionar coluna `daily_order_number` (int) e `order_date` (date) na tabela `orders`.
-- Criar função `get_next_daily_order_number()` que faz `MAX(daily_order_number) + 1 WHERE order_date = CURRENT_DATE` — retorna 1 se não houver pedidos hoje.
-- Trigger `BEFORE INSERT` preenche `order_date = CURRENT_DATE` e `daily_order_number` automaticamente.
-- Atualizar `build-whatsapp-message` para usar `daily_order_number` no lugar de `order_number` na mensagem do Telegram (formato continua `PEDIDO #1`, `#2`, `#3`...).
-- Manter `order_number` antiga no banco (não remover) para não quebrar nada.
+A tela ficará apenas com:
+- 🎉 Pedido Criado!
+- Card amarelo com #número e total
+- (Se PIX) confirmação de pagamento
+- Botão "Fechar"
 
-### Problema 2 — WhatsApp não abriu após finalizar pedido
-**Causa:** `window.open()` é chamado dentro de `openWhatsAppAndNotifyGroup()` que roda DEPOIS do `await createOrder()`. Em navegadores mobile, `window.open` só funciona se chamado **sincronamente dentro do clique do usuário** — após um `await`, o navegador bloqueia como popup.
+### Detalhes técnicos
+**Arquivo:** `src/components/OrderModal.tsx`
 
-**Solução técnica:**
-- Na tela de sucesso (`step === "sent"`), mostrar um **botão grande "📱 Abrir WhatsApp"** que o cliente clica manualmente. Esse clique é gesto direto do usuário → `window.open` funciona em qualquer navegador.
-- Guardar a mensagem do WhatsApp em estado (`useState<string>`) após o pedido ser criado, para o botão usar.
-- Também mostrar o resumo do pedido na tela de sucesso (número, total, itens) para o cliente saber o que foi pedido mesmo sem abrir o WhatsApp.
-- Telegram continua sendo enviado automático em background (já funciona).
+1. **Remover blocos JSX** (linhas ~816-835): o parágrafo de instrução, o `<a href={whatsAppUrl}>` e o aviso com telefone.
 
-### Problema 3 — Painel admin no site para ver pedidos
-Página `/admin` protegida por senha simples (sem necessidade de criar conta de usuário) para a dona ver todos os pedidos em tempo real.
+2. **Manter** a chamada `prepareWhatsAppAndNotifyGroup(orderId)` em `handleSubmit` e `handlePixApproved` — ela continua necessária porque dispara o **Telegram para o grupo dos entregadores** em background (fire-and-forget). Apenas paramos de exibir a URL do WhatsApp para o cliente.
 
-**Solução técnica:**
-- Criar rota `/admin` com tela de login simples: campo de senha comparado com uma senha fixa armazenada no `localStorage` após validação inicial. Senha definida via secret/constante (você me passa a senha desejada ou eu gero uma padrão).
-- Após login, página lista pedidos da tabela `orders` ordenados por `created_at DESC`, com:
-  - Número do dia (#1, #2...)
-  - Nome, telefone do cliente
-  - Tipo (entrega/retirada), endereço
-  - Itens, total, forma de pagamento
-  - Status (pendente, pago, etc.)
-  - Link "Ver no Maps" se for entrega
-  - Botão "Abrir no WhatsApp" para responder ao cliente
-- Atualização em tempo real usando Supabase Realtime — pedidos novos aparecem sem precisar atualizar a página.
-- RLS: criar policy de SELECT autorizada apenas com chave anon (já é o padrão público), mas a tela só mostra após senha correta no client. Para algo mais robusto depois, podemos migrar para auth real.
+3. **Limpar estado não utilizado** (opcional, mas mais limpo):
+   - Remover `whatsAppUrl` / `setWhatsAppUrl` (state e chamadas) já que não é mais exibido.
+   - Manter `sentDailyNumber` e `sentOrderTotal` (ainda usados no card).
 
-### Arquivos a alterar
-- `supabase/migrations/...` — coluna `daily_order_number`, `order_date`, função e trigger.
-- `supabase/functions/build-whatsapp-message/index.ts` — usar `daily_order_number`.
-- `src/components/OrderModal.tsx` — botão manual "Abrir WhatsApp" na tela de sucesso, guardar mensagem em estado.
-- `src/pages/Admin.tsx` (novo) — painel de pedidos com login por senha + realtime.
-- `src/App.tsx` — adicionar rota `/admin`.
+4. **Sem mudanças em** services, edge functions, banco, ou painel admin — pedidos continuam aparecendo no `/admin` em tempo real, que é exatamente o canal pelo qual a dona vai ver o pedido.
 
-### Pergunta antes de implementar
-Qual senha você quer para o painel admin? Sugiro `frango21` (simples de lembrar). Se preferir outra, me avise — caso contrário uso essa.
+### Observação sobre o GitHub
+Você mencionou ter atualizado e enviado para o GitHub. O Lovable sincroniza automaticamente em ambas as direções, então as alterações do GitHub já estão refletidas aqui. Sobre o commit em português: o Lovable gera as mensagens de commit automaticamente quando faço alterações; não consigo escrever a mensagem manualmente, mas o conteúdo do commit refletirá a mudança ("remover botão e instruções do WhatsApp da tela de pedido finalizado").
+
+### Build error mencionado
+O erro de build sobre `npm:openai@^4.52.5` é de uma edge function (provavelmente algo que veio do GitHub). Não é causado por essa alteração e pode ser tratado em uma tarefa separada se você quiser — me avise se quer que eu olhe junto.
 
