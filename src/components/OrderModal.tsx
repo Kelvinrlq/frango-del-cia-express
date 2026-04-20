@@ -63,7 +63,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pixError, setPixError] = useState<string | null>(null);
 
   // Sent screen state
-  const [whatsAppUrl, setWhatsAppUrl] = useState<string | null>(null);
+  
   const [sentOrderId, setSentOrderId] = useState<string | null>(null);
   const [sentOrderTotal, setSentOrderTotal] = useState<number>(0);
   const [sentDailyNumber, setSentDailyNumber] = useState<number | null>(null);
@@ -297,8 +297,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
         return;
       }
 
-      const url = await prepareWhatsAppAndNotifyGroup(orderData.order_id);
-      setWhatsAppUrl(url);
+      prepareWhatsAppAndNotifyGroup(orderData.order_id);
       setSentOrderId(orderData.order_id);
       setSentOrderTotal(total);
       fetchDailyNumber(orderData.order_id);
@@ -310,8 +309,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
   const handlePixApproved = async () => {
     if (pixData?.order_id) {
-      const url = await prepareWhatsAppAndNotifyGroup(pixData.order_id);
-      setWhatsAppUrl(url);
+      prepareWhatsAppAndNotifyGroup(pixData.order_id);
       setSentOrderId(pixData.order_id);
       setSentOrderTotal(pixData.amount ?? total);
       fetchDailyNumber(pixData.order_id);
@@ -813,26 +811,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </div>
                 )}
 
-                <p className="text-foreground font-semibold text-base">
-                  📱 Toque no botão abaixo para <strong>avisar o estabelecimento pelo WhatsApp</strong>:
-                </p>
-
-                {whatsAppUrl ? (
-                  <a
-                    href={whatsAppUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full bg-[#25D366] text-white font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity"
-                  >
-                    📱 Abrir WhatsApp
-                  </a>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Carregando mensagem...</p>
-                )}
-
-                <p className="text-xs text-muted-foreground">
-                  Se o WhatsApp não abrir, ligue para <strong>(67) 9327-7165</strong> e informe o número do pedido acima.
-                </p>
 
                 <button
                   onClick={onClose}
