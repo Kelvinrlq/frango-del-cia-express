@@ -114,9 +114,9 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
       deliveryFee: serverDeliveryFee,
     } : null;
 
-    const paymentStatus = payment_method === "dinheiro" ? "pending_cash"
-      : payment_method === "debito" ? "pending_debit"
-      : payment_method === "credito" ? "pending_credit"
+    const paymentStatus = payment_method === "dinheiro" ? "pending_dinheiro"
+      : payment_method === "debito" ? "pending_debito"
+      : payment_method === "credito" ? "pending_credito"
       : "pending";
 
     // VERSÃO CORRIGIDA: Convertendo items e delivery_info para JSON string
