@@ -4,7 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, MapPin, Phone, MessageCircle, LogOut } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
+import { Loader2, RefreshCw, MapPin, Phone, MessageCircle, LogOut, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/types/order";
 
 const ADMIN_PASSWORD = "frango21";
@@ -49,9 +61,15 @@ interface OrderRow {
 const PAYMENT_STATUS_LABEL: Record<string, { text: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { text: "PIX pendente", variant: "outline" },
   paid: { text: "✅ PIX pago", variant: "default" },
-  pending_dinheiro: { text: "💵 Dinheiro", variant: "secondary" },
-  pending_debito: { text: "💳 Débito", variant: "secondary" },
-  pending_credito: { text: "💳 Crédito", variant: "secondary" },
+  pending_dinheiro: { text: "💵 Dinheiro (a pagar)", variant: "secondary" },
+  pending_debito: { text: "💳 Débito (a pagar)", variant: "secondary" },
+  pending_credito: { text: "💳 Crédito (a pagar)", variant: "secondary" },
+  // Legados em inglês — mantidos para compatibilidade com pedidos antigos
+  pending_cash: { text: "💵 Dinheiro (a pagar)", variant: "secondary" },
+  pending_debit: { text: "💳 Débito (a pagar)", variant: "secondary" },
+  pending_credit: { text: "💳 Crédito (a pagar)", variant: "secondary" },
+  completed: { text: "✅ Concluído", variant: "default" },
+  failed: { text: "❌ Falhou", variant: "destructive" },
   cancelled: { text: "Cancelado", variant: "destructive" },
   expired: { text: "Expirado", variant: "destructive" },
 };

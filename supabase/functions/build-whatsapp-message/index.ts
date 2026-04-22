@@ -65,12 +65,17 @@ Deno.serve(async (req) => {
       .map((i) => `  • ${i.quantity}x ${i.name} — ${formatCurrency(i.unitPrice * i.quantity)}`)
       .join("\n");
 
-    const isPix = order.payment_status === "pending" || order.payment_status === "paid";
-    const paymentMethod = order.payment_status.startsWith("pending_")
-      ? order.payment_status.replace("pending_", "")
-      : order.payment_status === "pending" || order.payment_status === "paid"
-        ? "pix"
-        : "pix";
+    // Map payment_status -> payment method label
+    // Suporta status legados (cash/debit/credit) e novos (dinheiro/debito/credito)
+    const PAYMENT_METHOD_MAP: Record<string, string> = {
+      pending_dinheiro: "dinheiro",
+      pending_debito: "debito",
+      pending_credito: "credito",
+      pending_cash: "dinheiro",
+      pending_debit: "debito",
+      pending_credit: "credito",
+    };
+    const paymentMethod = PAYMENT_METHOD_MAP[order.payment_status] ?? "pix";
 
     // Build establishment message — use daily order number (resets every day)
     const displayNumber = order.daily_order_number ?? order.order_number;
