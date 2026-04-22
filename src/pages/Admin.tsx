@@ -4,7 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, MapPin, Phone, MessageCircle, LogOut } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
+import { Loader2, RefreshCw, MapPin, Phone, MessageCircle, LogOut, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/types/order";
 
 const ADMIN_PASSWORD = "frango21";
@@ -49,9 +61,15 @@ interface OrderRow {
 const PAYMENT_STATUS_LABEL: Record<string, { text: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { text: "PIX pendente", variant: "outline" },
   paid: { text: "✅ PIX pago", variant: "default" },
-  pending_dinheiro: { text: "💵 Dinheiro", variant: "secondary" },
-  pending_debito: { text: "💳 Débito", variant: "secondary" },
-  pending_credito: { text: "💳 Crédito", variant: "secondary" },
+  pending_dinheiro: { text: "💵 Dinheiro (a pagar)", variant: "secondary" },
+  pending_debito: { text: "💳 Débito (a pagar)", variant: "secondary" },
+  pending_credito: { text: "💳 Crédito (a pagar)", variant: "secondary" },
+  // Legados em inglês — mantidos para compatibilidade com pedidos antigos
+  pending_cash: { text: "💵 Dinheiro (a pagar)", variant: "secondary" },
+  pending_debit: { text: "💳 Débito (a pagar)", variant: "secondary" },
+  pending_credit: { text: "💳 Crédito (a pagar)", variant: "secondary" },
+  completed: { text: "✅ Concluído", variant: "default" },
+  failed: { text: "❌ Falhou", variant: "destructive" },
   cancelled: { text: "Cancelado", variant: "destructive" },
   expired: { text: "Expirado", variant: "destructive" },
 };
@@ -91,6 +109,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterToday, setFilterToday] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -156,6 +175,41 @@ export default function Admin() {
     localStorage.removeItem(AUTH_KEY);
     setAuthed(false);
     setPwd("");
+  };
+
+  const handleDelete = async (orderId: string, dailyNum: number | null) => {
+    setDeletingId(orderId);
+    try {
+      const { error } = await supabase.functions.invoke("delete-order", {
+        body: { order_id: orderId },
+        headers: { "x-admin-password": ADMIN_PASSWORD },
+      });
+
+      if (error) {
+        console.error("Delete error:", error);
+        toast({
+          title: "Erro ao excluir",
+          description: "Não foi possível excluir o pedido. Tente novamente.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Pedido excluído",
+          description: `Pedido ${dailyNum ? `#${dailyNum}` : ""} removido com sucesso.`,
+        });
+        // O realtime já remove o card; mas atualizamos manualmente como fallback
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      }
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: "Erro inesperado",
+        description: e instanceof Error ? e.message : "Falha ao excluir pedido.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (!authed) {
@@ -341,6 +395,44 @@ export default function Admin() {
                         WhatsApp do cliente
                       </Button>
                     </a>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={deletingId === o.id}
+                          aria-label="Excluir pedido"
+                        >
+                          {deletingId === o.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                          Excluir
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Excluir pedido {dailyNum ? `#${dailyNum}` : `#${o.order_number}`}?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação é permanente. O pedido de <strong>{o.customer_name}</strong> e
+                            seus dados de pagamento serão removidos do sistema. Não dá para desfazer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(o.id, dailyNum)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Sim, excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </CardContent>
               </Card>

@@ -139,24 +139,40 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Find and update payment
-    const { data: payment } = await supabase
+    const { data: payment, error: paymentFetchError } = await supabase
       .from("payments")
       .select("id, order_id, status")
       .eq("mercadopago_payment_id", String(mpPaymentId))
       .single();
 
+    if (paymentFetchError) {
+      console.error("Error fetching payment:", JSON.stringify(paymentFetchError));
+    }
+
     if (payment) {
-      await supabase
-        .from("payments")
-        .update({ status: ourStatus, payment_details: mpData })
-        .eq("id", payment.id);
-
-      await supabase
-        .from("orders")
-        .update({ payment_status: orderStatus })
-        .eq("id", payment.order_id);
-
-      console.log(`Payment ${mpPaymentId} updated to ${ourStatus}`);
+      if (ourStatus === "approved") {
+        const { error: rpcError } = await supabase.rpc("mark_payment_approved", {
+          p_payment_id: payment.id,
+          p_mp_data: mpData,
+        });
+        if (rpcError) {
+          console.error("mark_payment_approved error:", JSON.stringify(rpcError));
+        } else {
+          console.log(`Payment ${mpPaymentId} approved (order ${payment.order_id} -> paid)`);
+        }
+      } else {
+        const { error: rpcError } = await supabase.rpc("sync_payment_status", {
+          p_payment_id: payment.id,
+          p_payment_status: ourStatus,
+          p_order_status: orderStatus,
+          p_mp_data: mpData,
+        });
+        if (rpcError) {
+          console.error("sync_payment_status error:", JSON.stringify(rpcError));
+        } else {
+          console.log(`Payment ${mpPaymentId} updated to ${ourStatus} / order -> ${orderStatus}`);
+        }
+      }
     } else {
       console.log(`Payment ${mpPaymentId} not found in DB`);
     }

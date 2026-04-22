@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.build-whatsapp-message]
 verify_jwt = false
+
+[functions.delete-order]
+verify_jwt = false
