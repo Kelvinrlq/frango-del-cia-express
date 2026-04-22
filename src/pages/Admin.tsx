@@ -395,6 +395,44 @@ export default function Admin() {
                         WhatsApp do cliente
                       </Button>
                     </a>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={deletingId === o.id}
+                          aria-label="Excluir pedido"
+                        >
+                          {deletingId === o.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                          Excluir
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Excluir pedido {dailyNum ? `#${dailyNum}` : `#${o.order_number}`}?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação é permanente. O pedido de <strong>{o.customer_name}</strong> e
+                            seus dados de pagamento serão removidos do sistema. Não dá para desfazer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(o.id, dailyNum)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Sim, excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </CardContent>
               </Card>
