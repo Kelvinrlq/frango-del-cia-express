@@ -109,6 +109,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterToday, setFilterToday] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -174,6 +175,41 @@ export default function Admin() {
     localStorage.removeItem(AUTH_KEY);
     setAuthed(false);
     setPwd("");
+  };
+
+  const handleDelete = async (orderId: string, dailyNum: number | null) => {
+    setDeletingId(orderId);
+    try {
+      const { error } = await supabase.functions.invoke("delete-order", {
+        body: { order_id: orderId },
+        headers: { "x-admin-password": ADMIN_PASSWORD },
+      });
+
+      if (error) {
+        console.error("Delete error:", error);
+        toast({
+          title: "Erro ao excluir",
+          description: "Não foi possível excluir o pedido. Tente novamente.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Pedido excluído",
+          description: `Pedido ${dailyNum ? `#${dailyNum}` : ""} removido com sucesso.`,
+        });
+        // O realtime já remove o card; mas atualizamos manualmente como fallback
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      }
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: "Erro inesperado",
+        description: e instanceof Error ? e.message : "Falha ao excluir pedido.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (!authed) {
