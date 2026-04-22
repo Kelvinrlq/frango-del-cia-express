@@ -140,6 +140,19 @@ export type Database = {
           status: string
         }[]
       }
+      mark_payment_approved: {
+        Args: { p_mp_data: Json; p_payment_id: string }
+        Returns: undefined
+      }
+      sync_payment_status: {
+        Args: {
+          p_mp_data: Json
+          p_order_status: string
+          p_payment_id: string
+          p_payment_status: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
