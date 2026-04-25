@@ -37,7 +37,7 @@ export interface Order {
   pickup?: PickupInfo;
 }
 
-export const FRANGO_PRICE = 1;
+export const FRANGO_PRICE = 50;
 export const DEBITO_ACRESCIMO = 1;
 export const CREDITO_ACRESCIMO = 2.5;
 

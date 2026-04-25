@@ -53,7 +53,7 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
     }
 
     // Server-side price validation
-    const FRANGO_PRICE = 1;
+    const FRANGO_PRICE = 50;
     const DEBITO_ACRESCIMO = 1;
     const CREDITO_ACRESCIMO = 2.5;
 

@@ -47,30 +47,30 @@ export default function ProductCard() {
           ))}
         </div>
 
-        <div className="mt-4 flex items-end justify-between">
-          <div>
-            <p className="text-muted-foreground text-base font-bold">A partir de</p>
-            <p className="font-display text-5xl font-black text-primary leading-none">{formatCurrency(1)}</p>
-            <p className="text-sm text-muted-foreground font-semibold mt-1">Pix ou dinheiro</p>
-          </div>
-
-          {/* Qty selector */}
-          <div className="flex items-center gap-3 bg-muted rounded-xl p-1">
-            <button
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-              className="w-9 h-9 rounded-lg bg-card flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors font-bold shadow-sm"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <span className="font-display text-2xl text-foreground w-6 text-center">{qty}</span>
-            <button
-              onClick={() => setQty((q) => q + 1)}
-              className="w-9 h-9 rounded-lg bg-card flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors font-bold shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+      <div className="mt-4 space-y-3">
+        <div>
+          <p className="text-muted-foreground text-base font-bold">A partir de</p>
+          <p className="font-display text-5xl font-black text-primary leading-none">{formatCurrency(50 * qty)}</p>
+          <p className="text-sm text-muted-foreground font-semibold mt-1">Pix ou dinheiro</p>
         </div>
+
+        {/* Qty selector - com espaço adequado */}
+        <div className="flex items-center gap-3 bg-muted rounded-xl p-1 w-fit">
+          <button
+            onClick={() => setQty((q) => Math.max(1, q - 1))}
+            className="w-9 h-9 rounded-lg bg-card flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors font-bold shadow-sm"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="font-display text-2xl text-foreground min-w-[2rem] text-center">{qty}</span>
+          <button
+            onClick={() => setQty((q) => q + 1)}
+            className="w-9 h-9 rounded-lg bg-card flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors font-bold shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
         <button
           onClick={handleAdd}
@@ -88,19 +88,19 @@ export default function ProductCard() {
       <div className="bg-muted px-5 py-4 grid grid-cols-2 gap-3 text-sm font-bold">
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💳 Débito:</span>
-          <span className="text-foreground">{formatCurrency(2)}</span>
+          <span className="text-foreground">{formatCurrency(51)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💳 Crédito:</span>
-          <span className="text-foreground">{formatCurrency(3.5)}</span>
+          <span className="text-foreground">{formatCurrency(52.5)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>💰 Dinheiro:</span>
-          <span className="text-foreground">{formatCurrency(1)}</span>
+          <span className="text-foreground">{formatCurrency(50)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <span>📲 Pix:</span>
-          <span className="text-foreground">{formatCurrency(1)}</span>
+          <span className="text-foreground">{formatCurrency(50)}</span>
         </div>
       </div>
     </div>
