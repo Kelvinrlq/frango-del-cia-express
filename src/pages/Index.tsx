@@ -39,11 +39,12 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-secondary text-primary py-6 text-center">
-        <p className="font-display text-2xl font-bold">Casa do Frango Assado da 21</p>
-        <p className="text-primary/70 font-semibold text-base mt-1">© 2025 — Todos os direitos reservados</p>
-      </footer>
+     {/* Footer */}
+<footer className="bg-secondary text-primary py-6 text-center space-y-2">
+  <p className="font-display text-2xl font-bold">Casa do Frango Assado da 21</p>
+  <p className="text-primary/70 font-semibold text-base">© 2026 Casa do Frango Assado da 21. Todos os direitos reservados.</p>
+  <p className="text-primary/60 font-semibold text-sm">Desenvolvido por Kelvin Lucas Saucedo</p>
+</footer>
 
       <CartSidebar onCheckout={() => setShowOrder(true)} />
       {showOrder && <OrderModal onClose={() => setShowOrder(false)} />}
