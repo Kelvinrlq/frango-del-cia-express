@@ -12,7 +12,7 @@ import { sendTelegramMessage } from "@/services/telegramService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
-import { X, MapPin, Clock, User, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
+import { X, MapPin, User, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
 
 const ESTABLISHMENT_PHONE = "556793277165";
@@ -23,8 +23,7 @@ interface OrderModalProps {
   onClose: () => void;
 }
 
-type Step = "type" | "payment" | "form" | "confirm" | "pix" | "sent";
-type OrderType = "delivery" | "pickup";
+type Step = "payment" | "form" | "confirm" | "pix" | "sent";
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   pix: "📲 PIX",
@@ -35,8 +34,7 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
 
 export default function OrderModal({ onClose }: OrderModalProps) {
   const { items, clearCart } = useCart();
-  const [step, setStep] = useState<Step>("type");
-  const [orderType, setOrderType] = useState<OrderType>("delivery");
+  const [step, setStep] = useState<Step>("payment");
   const [payment, setPayment] = useState<PaymentMethod>("pix");
 
   // Delivery state
@@ -47,9 +45,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [complement, setComplement] = useState("");
   const [outOfRange, setOutOfRange] = useState(false);
 
-  // Pickup state
-  const [pickupName, setPickupName] = useState("");
-  const [pickupTime, setPickupTime] = useState("");
   const [deliveryName, setDeliveryName] = useState("");
   const [customerCpf, setCustomerCpf] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -63,13 +58,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pixError, setPixError] = useState<string | null>(null);
 
   // Sent screen state
-  
   const [sentOrderId, setSentOrderId] = useState<string | null>(null);
   const [sentOrderTotal, setSentOrderTotal] = useState<number>(0);
   const [sentDailyNumber, setSentDailyNumber] = useState<number | null>(null);
 
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
-  const deliveryFee = orderType === "delivery" ? (deliveryInfo.deliveryFee ?? 0) : 0;
+  const deliveryFee = deliveryInfo.deliveryFee ?? 0;
   const total = calcTotal(totalQty, payment, deliveryFee);
 
   const handleCepChange = async (val: string) => {
@@ -80,7 +74,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     setCep(formatted);
     setCepError("");
     setOutOfRange(false);
-    
 
     const digits = formatted.replace(/\D/g, "");
     if (digits.length === 8) {
@@ -155,15 +148,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   // Validação que muda conforme o método de pagamento
   const canProceedForm = () => {
     const isPhoneEmailValid = isPhoneValid;
-    
-    // Se for PIX, exigir email e CPF
+
+    // Se for PIX, exigir CPF
     if (payment === "pix") {
       if (!isCpfValid) return false;
     }
-    
-    if (orderType === "pickup") {
-      return pickupName.trim() && pickupTime.trim() && isPhoneEmailValid;
-    }
+
     return (
       deliveryName.trim() &&
       deliveryInfo.street &&
@@ -226,21 +216,22 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       setPixLoading(true);
       setPixError(null);
 
-      const customerName = orderType === "pickup" ? pickupName : deliveryName;
-      const { data, error } = await createPixPayment({
-        customer_name: customerName,
+      const cpfLimpo = customerCpf.replace(/\D/g, "");
+      const phoneLimpo = customerPhone.replace(/\D/g, "");
+
+      const payloadDebug = {
+        customer_name: deliveryName,
         customer_email: ESTABLISHMENT_EMAIL,
-        customer_phone: customerPhone.replace(/\D/g, ""),
-        customer_cpf: customerCpf.replace(/\D/g, ""),
-        total_amount: total,
+        customer_phone: phoneLimpo,
+        customer_cpf: cpfLimpo,
+        total_amount: Number(total),
         items: items.map((i) => ({
           id: i.id,
           name: i.name,
           quantity: i.quantity,
-          unitPrice: i.unitPrice,
         })),
-        order_type: orderType,
-        delivery_info: orderType === "delivery" ? {
+        order_type: "delivery",
+        delivery_info: {
           street: deliveryInfo.street,
           houseNumber,
           complement,
@@ -248,13 +239,21 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           city: deliveryInfo.city,
           state: deliveryInfo.state || "MS",
           cep,
-        } : undefined,
-        notes: orderType === "pickup" ? `Retirada às ${pickupTime}` : undefined,
-      });
+        },
+      };
+
+      console.log("📤 PAYLOAD ENVIADO:", JSON.stringify(payloadDebug, null, 2));
+      console.log("✅ CPF válido?", cpfLimpo.length === 11);
+      console.log("✅ Email:", ESTABLISHMENT_EMAIL);
+      console.log("✅ Telefone:", phoneLimpo);
+
+      const { data, error } = await createPixPayment(payloadDebug);
 
       setPixLoading(false);
 
       if (error || !data) {
+        console.error("❌ PIX Error:", error);
+        console.error("❌ Data retornada:", data);
         setPixError(error || "Erro ao gerar pagamento PIX");
         return;
       }
@@ -265,21 +264,19 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       setSendLoading(true);
       setSendError(null);
 
-      const customerName = orderType === "pickup" ? pickupName : deliveryName;
       const { data: orderData, error: orderError } = await createOrder({
-        customer_name: customerName,
+        customer_name: deliveryName,
         customer_email: ESTABLISHMENT_EMAIL,
         customer_phone: customerPhone.replace(/\D/g, ""),
-        total_amount: total,
+        total_amount: Number(total),
         items: items.map((i) => ({
           id: i.id,
           name: i.name,
           quantity: i.quantity,
-          unitPrice: i.unitPrice,
         })),
-        order_type: orderType,
+        order_type: "delivery",
         payment_method: payment,
-        delivery_info: orderType === "delivery" ? {
+        delivery_info: {
           street: deliveryInfo.street,
           houseNumber,
           complement,
@@ -287,8 +284,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           city: deliveryInfo.city,
           state: deliveryInfo.state || "MS",
           cep,
-        } : undefined,
-        notes: orderType === "pickup" ? `Retirada às ${pickupTime}` : undefined,
+        },
       });
 
       if (orderError || !orderData) {
@@ -324,15 +320,11 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     setPixData(null);
   };
 
-  const availablePayments: PaymentMethod[] =
-    orderType === "pickup"
-      ? ["pix"]
-      : ["pix", "dinheiro", "debito", "credito"];
+  const availablePayments: PaymentMethod[] = ["pix", "dinheiro", "debito", "credito"];
 
   const stepTitle = () => {
-    if (step === "type") return "Como deseja receber?";
     if (step === "payment") return "Forma de pagamento";
-    if (step === "form") return orderType === "delivery" ? "Endereço de entrega" : "Dados para retirada";
+    if (step === "form") return "Endereço de entrega";
     if (step === "confirm") return "Resumo do pedido";
     if (step === "pix") return "Pagamento PIX";
     return "";
@@ -361,49 +353,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            {/* STEP 1 — Order Type */}
-            {step === "type" && (
-              <div className="space-y-3 animate-fade-in">
-                <p className="text-muted-foreground font-semibold text-sm">
-                  Você tem {totalQty} frango{totalQty > 1 ? "s" : ""} no carrinho.
-                </p>
-                {(["delivery", "pickup"] as OrderType[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => { setOrderType(t); }}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
-                      orderType === t
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-muted hover:border-primary/40"
-                    }`}
-                  >
-                    <span className="text-3xl">{t === "delivery" ? "🏍️" : "🏪"}</span>
-                    <div>
-                      <p className="font-display text-xl text-foreground">
-                        {t === "delivery" ? "Entrega" : "Retirada"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {t === "delivery"
-                          ? "Receba em casa — taxa por distância"
-                          : "Buscar no estabelecimento — pagar via PIX antes"}
-                      </p>
-                    </div>
-                    <ChevronRight
-                      className={`ml-auto w-5 h-5 transition-colors ${orderType === t ? "text-primary" : "text-muted-foreground"}`}
-                    />
-                  </button>
-                ))}
-
-                <button
-                  onClick={() => setStep("payment")}
-                  className="w-full gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity mt-2"
-                >
-                  Continuar →
-                </button>
-              </div>
-            )}
-
-            {/* STEP 2 — Payment Method */}
+            {/* STEP 1 — Payment Method */}
             {step === "payment" && (
               <div className="space-y-4 animate-fade-in">
                 <div>
@@ -441,7 +391,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
 
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setStep("type")}
+                    onClick={() => onClose()}
                     className="flex-1 py-3 rounded-xl border-2 border-border text-foreground font-bold hover:bg-muted transition-colors"
                   >
                     ← Voltar
@@ -456,168 +406,116 @@ export default function OrderModal({ onClose }: OrderModalProps) {
               </div>
             )}
 
-            {/* STEP 3 — Form */}
+            {/* STEP 2 — Form */}
             {step === "form" && (
               <div className="space-y-4 animate-fade-in">
-                {orderType === "pickup" ? (
-                  <>
-                    <div className="bg-muted border border-primary/30 rounded-xl p-4 flex gap-3">
-                      <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <p className="text-sm text-foreground font-semibold">
-                        Para retirada, o pagamento é <strong>somente via PIX</strong> antes de buscar o frango.
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-foreground mb-1">
-                        <User className="w-4 h-4 inline mr-1" />
-                        Nome de quem vai buscar *
-                      </label>
-                      <input
-                        type="text"
-                        value={pickupName}
-                        onChange={(e) => setPickupName(e.target.value)}
-                        placeholder="Ex: João Silva"
-                        className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-foreground mb-1">
-                        <Clock className="w-4 h-4 inline mr-1" />
-                        Horário de retirada *
-                      </label>
-                      <select
-                        value={pickupTime}
-                        onChange={(e) => setPickupTime(e.target.value)}
-                        className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <option value="">Selecione o horário</option>
-                        <option value="08:00">08:00</option>
-                        <option value="08:30">08:30</option>
-                        <option value="09:00">09:00</option>
-                        <option value="09:30">09:30</option>
-                        <option value="10:00">10:00</option>
-                        <option value="10:30">10:30</option>
-                        <option value="11:00">11:00</option>
-                        <option value="11:30">11:30</option>
-                        <option value="12:00">12:00</option>
-                        <option value="12:30">12:30</option>
-                        <option value="13:00">13:00</option>
-                        <option value="13:30">13:30</option>
-                        <option value="14:00">14:00</option>
-                      </select>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-sm font-bold text-foreground mb-1">
-                        <User className="w-4 h-4 inline mr-1" />
-                        Nome de quem vai receber *
-                      </label>
-                      <input
-                        type="text"
-                        value={deliveryName}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^a-zA-ZÀ-ÿ\s]/g, "");
-                          setDeliveryName(val);
-                        }}
-                        placeholder="Ex: João Silva"
-                        maxLength={100}
-                        className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-foreground mb-1">
-                        <MapPin className="w-4 h-4 inline mr-1" />
-                        CEP *
-                      </label>
-                      <input
-                        type="text"
-                        value={cep}
-                        onChange={(e) => handleCepChange(e.target.value)}
-                        placeholder="00000-000"
-                        maxLength={9}
-                        className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      {cepLoading && <p className="text-xs text-muted-foreground mt-1">Buscando endereço...</p>}
-                      {cepError && <p className="text-xs text-destructive mt-1">{cepError}</p>}
-                      {deliveryInfo.street !== undefined && (
-                        <>
-                          <div className="mt-2">
-                            <label className="block text-sm font-bold text-foreground mb-1">Rua *</label>
-                            <input
-                              type="text"
-                              value={deliveryInfo.street || ""}
-                              onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, street: e.target.value }))}
-                              placeholder="Rua / Logradouro"
-                              className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                            />
-                          </div>
-                          <div className="mt-2">
-                            <label className="block text-sm font-bold text-foreground mb-1">Bairro *</label>
-                            <input
-                              type="text"
-                              value={deliveryInfo.neighborhood || ""}
-                              onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, neighborhood: e.target.value }))}
-                              placeholder="Bairro"
-                              className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                            />
-                          </div>
-                          <div className="mt-2">
-                            <label className="block text-sm font-bold text-foreground mb-1">Cidade / Estado</label>
-                            <input
-                              type="text"
-                              value={`${deliveryInfo.city || "Corumbá"}, MS`}
-                              disabled
-                              className="w-full border border-border rounded-xl px-4 py-3 text-muted-foreground bg-muted font-semibold cursor-not-allowed"
-                            />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-bold text-foreground mb-1">Número *</label>
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">
+                    <User className="w-4 h-4 inline mr-1" />
+                    Nome de quem vai receber *
+                  </label>
+                  <input
+                    type="text"
+                    value={deliveryName}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^a-zA-ZÀ-ÿ\s]/g, "");
+                      setDeliveryName(val);
+                    }}
+                    placeholder="Ex: João Silva"
+                    maxLength={100}
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-foreground mb-1">
+                    <MapPin className="w-4 h-4 inline mr-1" />
+                    CEP *
+                  </label>
+                  <input
+                    type="text"
+                    value={cep}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {cepLoading && <p className="text-xs text-muted-foreground mt-1">Buscando endereço...</p>}
+                  {cepError && <p className="text-xs text-destructive mt-1">{cepError}</p>}
+                  {deliveryInfo.street !== undefined && (
+                    <>
+                      <div className="mt-2">
+                        <label className="block text-sm font-bold text-foreground mb-1">Rua *</label>
                         <input
                           type="text"
-                          value={houseNumber}
-                          onChange={(e) => handleHouseNumberChange(e.target.value)}
-                          placeholder="123"
+                          value={deliveryInfo.street || ""}
+                          onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, street: e.target.value }))}
+                          placeholder="Rua / Logradouro"
                           className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-bold text-foreground mb-1">Complemento</label>
+                      <div className="mt-2">
+                        <label className="block text-sm font-bold text-foreground mb-1">Bairro *</label>
                         <input
                           type="text"
-                          value={complement}
-                          onChange={(e) => setComplement(e.target.value)}
-                          placeholder="Apto, bloco..."
+                          value={deliveryInfo.neighborhood || ""}
+                          onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, neighborhood: e.target.value }))}
+                          placeholder="Bairro"
                           className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
-                    </div>
-
-                    {(deliveryInfo.deliveryFee ?? 0) > 0 && (
-                      <div className="bg-muted border border-primary/30 rounded-xl p-3 text-sm">
-                        <p className="text-primary font-bold text-lg">
-                          🛵 Taxa de entrega: {formatCurrency(deliveryInfo.deliveryFee ?? 0)}
-                        </p>
+                      <div className="mt-2">
+                        <label className="block text-sm font-bold text-foreground mb-1">Cidade / Estado</label>
+                        <input
+                          type="text"
+                          value={`${deliveryInfo.city || "Corumbá"}, MS`}
+                          disabled
+                          className="w-full border border-border rounded-xl px-4 py-3 text-muted-foreground bg-muted font-semibold cursor-not-allowed"
+                        />
                       </div>
-                    )}
+                    </>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-bold text-foreground mb-1">Número *</label>
+                    <input
+                      type="text"
+                      value={houseNumber}
+                      onChange={(e) => handleHouseNumberChange(e.target.value)}
+                      placeholder="123"
+                      className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-foreground mb-1">Complemento</label>
+                    <input
+                      type="text"
+                      value={complement}
+                      onChange={(e) => setComplement(e.target.value)}
+                      placeholder="Apto, bloco..."
+                      className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
 
-                    {outOfRange && (
-                      <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm">
-                        <p className="text-destructive font-bold flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          Fora da área de cobertura
-                        </p>
-                        <p className="text-muted-foreground mt-1">
-                          Distância fora da área de cobertura padrão, favor consultar valor no WhatsApp.
-                        </p>
-                      </div>
-                    )}
-                  </>
+                {(deliveryInfo.deliveryFee ?? 0) > 0 && (
+                  <div className="bg-muted border border-primary/30 rounded-xl p-3 text-sm">
+                    <p className="text-primary font-bold text-lg">
+                      🛵 Taxa de entrega: {formatCurrency(deliveryInfo.deliveryFee ?? 0)}
+                    </p>
+                  </div>
+                )}
+
+                {outOfRange && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 text-sm">
+                    <p className="text-destructive font-bold flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      Fora da área de cobertura
+                    </p>
+                    <p className="text-muted-foreground mt-1">
+                      Distância fora da área de cobertura padrão, favor consultar valor no WhatsApp.
+                    </p>
+                  </div>
                 )}
 
                 {/* Telefone */}
@@ -639,7 +537,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   )}
                 </div>
 
-      
                 {/* CPF - Só mostrar se for PIX */}
                 {payment === "pix" && (
                   <div>
@@ -679,7 +576,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
               </div>
             )}
 
-            {/* STEP 4 — Confirm */}
+            {/* STEP 3 — Confirm */}
             {step === "confirm" && (
               <div className="space-y-4 animate-fade-in">
                 <div className="bg-muted rounded-xl p-4 space-y-2">
@@ -693,26 +590,15 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                 </div>
 
                 <div className="bg-muted rounded-xl p-4 space-y-2">
-                  <h3 className="font-display text-lg text-foreground">
-                    {orderType === "delivery" ? "🚚 Entrega" : "🏪 Retirada"}
-                  </h3>
-                  {orderType === "pickup" ? (
-                    <>
-                      <p className="text-sm font-semibold">👤 {pickupName}</p>
-                      <p className="text-sm font-semibold">⏰ {pickupTime}</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm font-semibold">👤 {deliveryName}</p>
-                      <p className="text-sm font-semibold">
-                        📍 {deliveryInfo.street}, {houseNumber}{complement ? ` (${complement})` : ""}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{deliveryInfo.neighborhood} — {deliveryInfo.city}</p>
-                      <p className="text-sm font-semibold text-primary">
-                        🛵 Taxa de entrega: {formatCurrency(deliveryFee)}
-                      </p>
-                    </>
-                  )}
+                  <h3 className="font-display text-lg text-foreground">🚚 Entrega</h3>
+                  <p className="text-sm font-semibold">👤 {deliveryName}</p>
+                  <p className="text-sm font-semibold">
+                    📍 {deliveryInfo.street}, {houseNumber}{complement ? ` (${complement})` : ""}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{deliveryInfo.neighborhood} — {deliveryInfo.city}</p>
+                  <p className="text-sm font-semibold text-primary">
+                    🛵 Taxa de entrega: {formatCurrency(deliveryFee)}
+                  </p>
                   <p className="text-sm font-semibold">💳 {PAYMENT_LABELS[payment]}</p>
                 </div>
 
@@ -763,7 +649,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
               </div>
             )}
 
-            {/* STEP 5 — PIX Payment */}
+            {/* STEP 4 — PIX Payment */}
             {step === "pix" && pixData && (
               <div className="space-y-4 animate-fade-in">
                 <PixPaymentDisplay
@@ -781,7 +667,10 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                 />
 
                 <button
-                  onClick={() => { setStep("confirm"); setPixData(null); }}
+                  onClick={() => {
+                    setStep("confirm");
+                    setPixData(null);
+                  }}
                   className="w-full py-3 rounded-xl border-2 border-border text-foreground font-bold hover:bg-muted transition-colors"
                 >
                   ← Cancelar e voltar
@@ -789,7 +678,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
               </div>
             )}
 
-            {/* SENT */}
+            {/* STEP 5 — SENT */}
             {step === "sent" && (
               <div className="text-center py-6 space-y-4 animate-bounce-in">
                 <div className="text-6xl">🎉</div>
@@ -810,7 +699,6 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                     ✅ Pagamento PIX confirmado!
                   </div>
                 )}
-
 
                 <button
                   onClick={onClose}

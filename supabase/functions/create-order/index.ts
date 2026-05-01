@@ -30,19 +30,30 @@ Deno.serve(async (req) => {
       notes,
     } = await req.json();
 
+    console.log("🔍 Request body recebido:", { 
+      customer_name, 
+      customer_phone, 
+      total_amount, 
+      items: items?.length,
+      items_full: JSON.stringify(items),
+      order_type,
+      payment_method 
+    });
+    
     // Validate required fields
-if (!customer_name || !customer_phone || !total_amount || !items || !Array.isArray(items) || items.length === 0) {      return new Response(
+    if (!customer_name || !customer_phone || !total_amount || !items || !Array.isArray(items) || items.length === 0) {
+      return new Response(
         JSON.stringify({ error: "Campos obrigatórios faltando" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-if (customer_email && !EMAIL_REGEX.test(customer_email)) {
-  return new Response(
-    JSON.stringify({ error: "E-mail inválido" }),
-    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
+    if (customer_email && !EMAIL_REGEX.test(customer_email)) {
+      return new Response(
+        JSON.stringify({ error: "E-mail inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Reject client-submitted deliveryFee
     if (delivery_info?.deliveryFee !== undefined) {
@@ -63,6 +74,15 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
       return sum + qty;
     }, 0);
 
+    console.log("📊 Cálculo de preço - ANTES validação:", {
+      totalQuantity,
+      FRANGO_PRICE,
+      payment_method,
+      order_type,
+      serverDeliveryFee_esperada: order_type === "delivery" ? 10 : 0,
+      total_amount_recebido: total_amount
+    });
+
     if (!Number.isFinite(totalQuantity) || totalQuantity <= 0) {
       return new Response(
         JSON.stringify({ error: "Itens inválidos" }),
@@ -75,7 +95,13 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
     if (payment_method === "debito") unitPrice += DEBITO_ACRESCIMO;
     if (payment_method === "credito") unitPrice += CREDITO_ACRESCIMO;
 
-        // Calculate delivery fee server-side (FIXED: R$ 10 for Corumbá)
+    console.log("💰 Unit price calculado:", {
+      unitPrice,
+      payment_method,
+      totalQuantity
+    });
+
+    // Calculate delivery fee server-side (FIXED: R$ 10 for Corumbá)
     let serverDeliveryFee = 0;
     if (order_type === "delivery") {
       if (!delivery_info?.street || !delivery_info?.houseNumber || !delivery_info?.city) {
@@ -95,7 +121,18 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
         );
       }
     }
+
     const serverTotal = unitPrice * totalQuantity + serverDeliveryFee;
+
+    console.log("🔢 VALORES FINAIS COMPARAÇÃO:", {
+      serverTotal,
+      total_amount,
+      diferenca: Math.abs(serverTotal - Number(total_amount)),
+      unitPrice,
+      totalQuantity,
+      serverDeliveryFee,
+      payment_method
+    });
 
     if (Math.abs(serverTotal - Number(total_amount)) > 0.01) {
       console.error(`Price mismatch: server=${serverTotal}, client=${total_amount}`);
@@ -120,7 +157,7 @@ if (customer_email && !EMAIL_REGEX.test(customer_email)) {
       : "pending";
 
     // VERSÃO CORRIGIDA: Convertendo items e delivery_info para JSON string
-      const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
         customer_name,

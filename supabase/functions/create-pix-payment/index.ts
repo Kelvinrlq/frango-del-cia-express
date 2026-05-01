@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Fixed delivery fee for Corumbá-MS — must match client-side deliveryService.ts
-const FIXED_DELIVERY_FEE = 0;
+const FIXED_DELIVERY_FEE = 10.0;
 
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

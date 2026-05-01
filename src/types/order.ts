@@ -1,4 +1,4 @@
-export type OrderType = "delivery" | "pickup";
+export type OrderType = "delivery";
 
 export type PaymentMethod =
   | "pix"
@@ -24,17 +24,11 @@ export interface DeliveryInfo {
   deliveryFee: number;
 }
 
-export interface PickupInfo {
-  name: string;
-  time: string;
-}
-
 export interface Order {
   type: OrderType;
   items: CartItem[];
   paymentMethod: PaymentMethod;
-  delivery?: DeliveryInfo;
-  pickup?: PickupInfo;
+  delivery: DeliveryInfo;
 }
 
 export const FRANGO_PRICE = 50;

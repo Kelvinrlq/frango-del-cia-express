@@ -5,7 +5,7 @@ interface CreateOrderRequest {
   customer_email: string;
   customer_phone: string;
   total_amount: number;
-  items: Array<{ id: string; name: string; quantity: number; unitPrice: number }>;
+  items: Array<{ id: string; name: string; quantity: number; unitPrice?: number }>;
   order_type: "delivery" | "pickup";
   payment_method: string;
   delivery_info?: Record<string, unknown>;
@@ -29,13 +29,25 @@ export async function createOrder(
   payload: CreateOrderRequest
 ): Promise<{ data: CreateOrderResponse | null; error: string | null }> {
   try {
+    console.log("📤 OrderService enviando payload:", JSON.stringify(payload, null, 2));
+
     const { data, error } = await supabase.functions.invoke("create-order", {
       body: payload,
     });
-    if (error) return { data: null, error: "Erro ao criar pedido." };
-    if (data?.error) return { data: null, error: data.error };
+
+    console.log("📥 OrderService recebeu resposta:", { data, error });
+
+    if (error) {
+      console.error("❌ Erro da função:", error);
+      return { data: null, error: "Erro ao criar pedido." };
+    }
+    if (data?.error) {
+      console.error("❌ Erro no response:", data.error);
+      return { data: null, error: data.error };
+    }
     return { data, error: null };
-  } catch {
+  } catch (err) {
+    console.error("❌ Erro catch:", err);
     return { data: null, error: "Erro inesperado." };
   }
 }
