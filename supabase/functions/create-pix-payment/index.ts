@@ -91,9 +91,9 @@ Deno.serve(async (req) => {
       }
 
       const cityNorm = String(delivery_info.city).toLowerCase().trim();
-      if (cityNorm !== "corumbá" && cityNorm !== "corumba") {
+      if (cityNorm !== "corumbá" && cityNorm !== "corumba" && cityNorm !== "ladário" && cityNorm !== "ladario") {
         return new Response(
-          JSON.stringify({ error: "Entrega disponível apenas em Corumbá-MS" }),
+          JSON.stringify({ error: "Entrega disponível apenas em Corumbá e Ladário" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

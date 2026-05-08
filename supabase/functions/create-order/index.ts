@@ -9,7 +9,6 @@ const corsHeaders = {
 // Fixed delivery fee for Corumbá-MS
 const FIXED_DELIVERY_FEE = 10.0;
 
-
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 Deno.serve(async (req) => {
@@ -101,7 +100,7 @@ Deno.serve(async (req) => {
       totalQuantity
     });
 
-    // Calculate delivery fee server-side (FIXED: R$ 10 for Corumbá)
+    // Calculate delivery fee server-side (FIXED: R$ 10 for Corumbá and Ladário)
     let serverDeliveryFee = 0;
     if (order_type === "delivery") {
       if (!delivery_info?.street || !delivery_info?.houseNumber || !delivery_info?.city) {
@@ -111,12 +110,12 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Taxa fixa para Corumbá: R$ 10,00
-      if (delivery_info.city.toLowerCase() === "corumbá" || delivery_info.city.toLowerCase() === "corumba") {
+      const cityNorm = delivery_info.city.toLowerCase().trim();
+      if (cityNorm === "corumbá" || cityNorm === "corumba" || cityNorm === "ladário" || cityNorm === "ladario") {
         serverDeliveryFee = 10;
       } else {
         return new Response(
-          JSON.stringify({ error: "Entrega disponível apenas em Corumbá" }),
+          JSON.stringify({ error: "Entrega disponível apenas em Corumbá e Ladário" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -156,7 +155,6 @@ Deno.serve(async (req) => {
       : payment_method === "credito" ? "pending_credito"
       : "pending";
 
-    // VERSÃO CORRIGIDA: Convertendo items e delivery_info para JSON string
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -164,16 +162,15 @@ Deno.serve(async (req) => {
         customer_email,
         customer_phone: customer_phone.replace(/\D/g, ""),
         total_amount: serverTotal,
-        items, // ✅ SEM JSON.stringify
+        items,
         order_type: order_type || "delivery",
-        delivery_info: sanitizedDeliveryInfo || null, // ✅ SEM JSON.stringify
+        delivery_info: sanitizedDeliveryInfo || null,
         notes: notes || null,
         payment_status: paymentStatus,
       })
       .select()
       .single();
 
-    // MELHOR LOGGING DO ERRO
     if (orderError) {
       console.error("Order insert error:", JSON.stringify(orderError, null, 2));
       return new Response(

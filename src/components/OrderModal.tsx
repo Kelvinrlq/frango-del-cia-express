@@ -229,6 +229,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           id: i.id,
           name: i.name,
           quantity: i.quantity,
+          unitPrice: i.unitPrice,
         })),
         order_type: "delivery",
         delivery_info: {
@@ -273,6 +274,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           id: i.id,
           name: i.name,
           quantity: i.quantity,
+          unitPrice: i.unitPrice,
         })),
         order_type: "delivery",
         payment_method: payment,
