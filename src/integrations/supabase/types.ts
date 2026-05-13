@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      customer_addresses: {
+        Row: {
+          cep: string
+          city: string
+          complement: string | null
+          created_at: string
+          house_number: string
+          id: string
+          is_default: boolean
+          label: string | null
+          neighborhood: string | null
+          profile_id: string
+          street: string
+          updated_at: string
+        }
+        Insert: {
+          cep: string
+          city: string
+          complement?: string | null
+          created_at?: string
+          house_number: string
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          neighborhood?: string | null
+          profile_id: string
+          street: string
+          updated_at?: string
+        }
+        Update: {
+          cep?: string
+          city?: string
+          complement?: string | null
+          created_at?: string
+          house_number?: string
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          neighborhood?: string | null
+          profile_id?: string
+          street?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_addresses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          last_cpf: string | null
+          last_email: string | null
+          last_order_type: string | null
+          last_payment_method: string | null
+          name: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_cpf?: string | null
+          last_email?: string | null
+          last_order_type?: string | null
+          last_payment_method?: string | null
+          name: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_cpf?: string | null
+          last_email?: string | null
+          last_order_type?: string | null
+          last_payment_method?: string | null
+          name?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
