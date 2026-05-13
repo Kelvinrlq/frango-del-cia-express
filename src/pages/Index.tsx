@@ -3,7 +3,9 @@ import Header from "@/components/Header";
 import ProductCard from "@/components/ProductCard";
 import CartSidebar from "@/components/CartSidebar";
 import OrderModal from "@/components/OrderModal";
+import WelcomeModal from "@/components/WelcomeModal";
 import { CartProvider, useCart } from "@/context/CartContext";
+import { ProfileProvider } from "@/context/ProfileContext";
 import logo from "@/assets/logo.png";
 
 function HomeContent() {
@@ -48,14 +50,17 @@ function HomeContent() {
 
       <CartSidebar onCheckout={() => setShowOrder(true)} />
       {showOrder && <OrderModal onClose={() => setShowOrder(false)} />}
+      <WelcomeModal />
     </div>
   );
 }
 
 export default function Index() {
   return (
-    <CartProvider>
-      <HomeContent />
-    </CartProvider>
+    <ProfileProvider>
+      <CartProvider>
+        <HomeContent />
+      </CartProvider>
+    </ProfileProvider>
   );
 }
