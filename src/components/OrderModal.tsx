@@ -484,6 +484,61 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                     className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
+
+                {/* Saved addresses picker */}
+                {addresses.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-foreground">
+                      <MapPin className="w-4 h-4 inline mr-1" />
+                      Endereços salvos
+                    </label>
+                    <div className="space-y-2">
+                      {addresses.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => selectSavedAddress(a.id)}
+                          className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-start justify-between gap-2 ${
+                            selectedAddressId === a.id
+                              ? "border-primary bg-primary/10"
+                              : "border-border bg-muted hover:border-primary/40"
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-foreground text-sm truncate">
+                              {a.label || `${a.street}, ${a.house_number}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {a.street}, {a.house_number}
+                              {a.complement ? ` (${a.complement})` : ""} — {a.neighborhood || ""}
+                            </p>
+                            <p className="text-xs text-muted-foreground">CEP {a.cep}</p>
+                          </div>
+                          <span
+                            onClick={(e) => handleDeleteAddress(e, a.id)}
+                            className="shrink-0 p-1 rounded-md hover:bg-destructive/10 text-destructive cursor-pointer"
+                            aria-label="Excluir endereço"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </span>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => selectSavedAddress("new")}
+                        className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
+                          selectedAddressId === "new"
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-muted hover:border-primary/40"
+                        }`}
+                      >
+                        <Plus className="w-4 h-4 text-primary" />
+                        <span className="font-bold text-foreground text-sm">Usar outro endereço</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-bold text-foreground mb-1">
                     <MapPin className="w-4 h-4 inline mr-1" />
