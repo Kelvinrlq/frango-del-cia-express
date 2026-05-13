@@ -195,18 +195,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     }
   };
 
-  const fetchDailyNumber = async (orderId: string) => {
-    try {
-      const { data } = await supabase
-        .from("orders")
-        .select("daily_order_number")
-        .eq("id", orderId)
-        .single();
-      if (data?.daily_order_number) setSentDailyNumber(data.daily_order_number);
-    } catch (err) {
-      console.error("Erro ao buscar número do pedido:", err);
-    }
-  };
+  // (daily_order_number agora vem na resposta do edge function — não há leitura direta do banco)
 
   const [sendLoading, setSendLoading] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
