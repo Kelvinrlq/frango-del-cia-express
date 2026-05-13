@@ -179,6 +179,50 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Sync customer profile preferences (fire-and-forget style — errors logged but not blocking)
+    try {
+      const phoneClean = customer_phone.replace(/\D/g, "");
+      const { data: prof } = await supabase
+        .from("customer_profiles")
+        .select("id")
+        .eq("phone", phoneClean)
+        .maybeSingle();
+      if (prof) {
+        await supabase.from("customer_profiles").update({
+          last_order_type: order_type || "delivery",
+          last_payment_method: payment_method,
+        }).eq("id", prof.id);
+
+        if (order_type === "delivery" && sanitizedDeliveryInfo) {
+          const { data: existing } = await supabase
+            .from("customer_addresses")
+            .select("id")
+            .eq("profile_id", prof.id)
+            .eq("cep", sanitizedDeliveryInfo.cep)
+            .eq("house_number", sanitizedDeliveryInfo.houseNumber)
+            .maybeSingle();
+          if (!existing) {
+            const { count } = await supabase
+              .from("customer_addresses")
+              .select("id", { count: "exact", head: true })
+              .eq("profile_id", prof.id);
+            await supabase.from("customer_addresses").insert({
+              profile_id: prof.id,
+              cep: sanitizedDeliveryInfo.cep,
+              street: sanitizedDeliveryInfo.street || "",
+              house_number: sanitizedDeliveryInfo.houseNumber,
+              neighborhood: sanitizedDeliveryInfo.neighborhood || null,
+              complement: sanitizedDeliveryInfo.complement || null,
+              city: sanitizedDeliveryInfo.city,
+              is_default: (count ?? 0) === 0,
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error("profile sync error:", e);
+    }
+
     return new Response(
       JSON.stringify({
         order_id: order.id,
