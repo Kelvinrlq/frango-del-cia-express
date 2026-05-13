@@ -287,7 +287,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       prepareWhatsAppAndNotifyGroup(orderData.order_id);
       setSentOrderId(orderData.order_id);
       setSentOrderTotal(total);
-      fetchDailyNumber(orderData.order_id);
+      if (orderData.daily_order_number != null) setSentDailyNumber(orderData.daily_order_number);
       setSendLoading(false);
       setStep("sent");
       clearCart();
@@ -299,7 +299,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       prepareWhatsAppAndNotifyGroup(pixData.order_id);
       setSentOrderId(pixData.order_id);
       setSentOrderTotal(pixData.amount ?? total);
-      fetchDailyNumber(pixData.order_id);
+      if (pixData.daily_order_number != null) setSentDailyNumber(pixData.daily_order_number);
     }
     setStep("sent");
     clearCart();
