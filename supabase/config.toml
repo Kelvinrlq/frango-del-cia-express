@@ -26,3 +26,18 @@ verify_jwt = false
 
 [functions.list-orders]
 verify_jwt = false
+
+[functions.get-or-create-profile]
+verify_jwt = false
+
+[functions.update-profile]
+verify_jwt = false
+
+[functions.upsert-address]
+verify_jwt = false
+
+[functions.delete-address]
+verify_jwt = false
+
+[functions.list-customer-orders]
+verify_jwt = false

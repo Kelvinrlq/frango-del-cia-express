@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
+import { useProfile } from "@/context/ProfileContext";
 import {
   PaymentMethod,
   DeliveryInfo,
@@ -12,12 +13,13 @@ import { sendTelegramMessage } from "@/services/telegramService";
 import { supabase } from "@/integrations/supabase/client";
 import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
-import { X, MapPin, User, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
+import { X, MapPin, User, AlertCircle, Loader2, Trash2, Plus } from "lucide-react";
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
+
 
 const ESTABLISHMENT_PHONE = "556793277165";
 const ESTABLISHMENT_EMAIL = "kelvintrp538@gmail.com";
-const TELEGRAM_DELIVERY_GROUP_ID = "-5292514760"; // ID do grupo Telegram dos entregadores
+const TELEGRAM_DELIVERY_GROUP_ID = "-5292514760";
 
 interface OrderModalProps {
   onClose: () => void;
@@ -32,23 +34,88 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   credito: "💳 Crédito (+R$2,50)",
 };
 
+const formatPhone = (digits: string) =>
+  digits
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+
 export default function OrderModal({ onClose }: OrderModalProps) {
   const { items, clearCart } = useCart();
+  const { profile, addresses, deleteAddress } = useProfile();
   const [step, setStep] = useState<Step>("payment");
-  const [payment, setPayment] = useState<PaymentMethod>("pix");
+  const [payment, setPayment] = useState<PaymentMethod>(
+    (profile?.last_payment_method as PaymentMethod) || "pix"
+  );
 
-  // Delivery state
-  const [cep, setCep] = useState("");
+  // Saved address selection
+  const defaultAddress = addresses.find((a) => a.is_default) || addresses[0];
+  const [selectedAddressId, setSelectedAddressId] = useState<string | "new">(
+    defaultAddress ? defaultAddress.id : "new"
+  );
+
+  // Delivery state — initialized from default saved address, if any
+  const [cep, setCep] = useState(defaultAddress?.cep || "");
   const [cepLoading, setCepLoading] = useState(false);
-  const [deliveryInfo, setDeliveryInfo] = useState<Partial<DeliveryInfo>>({});
-  const [houseNumber, setHouseNumber] = useState("");
-  const [complement, setComplement] = useState("");
+  const [deliveryInfo, setDeliveryInfo] = useState<Partial<DeliveryInfo>>(
+    defaultAddress
+      ? {
+          cep: defaultAddress.cep,
+          street: defaultAddress.street,
+          neighborhood: defaultAddress.neighborhood || "",
+          city: defaultAddress.city,
+          state: "MS",
+          deliveryFee: 10,
+        }
+      : {}
+  );
+  const [houseNumber, setHouseNumber] = useState(defaultAddress?.house_number || "");
+  const [complement, setComplement] = useState(defaultAddress?.complement || "");
   const [outOfRange, setOutOfRange] = useState(false);
 
-  const [deliveryName, setDeliveryName] = useState("");
-  const [customerCpf, setCustomerCpf] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [deliveryName, setDeliveryName] = useState(profile?.name || "");
+  const [customerCpf, setCustomerCpf] = useState(() => {
+    const d = profile?.last_cpf || "";
+    return d
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  });
+  const [customerEmail, setCustomerEmail] = useState(profile?.last_email || "");
+  const [customerPhone, setCustomerPhone] = useState(
+    profile?.phone ? formatPhone(profile.phone) : ""
+  );
+
+  const selectSavedAddress = (id: string) => {
+    setSelectedAddressId(id);
+    if (id === "new") {
+      setCep("");
+      setDeliveryInfo({});
+      setHouseNumber("");
+      setComplement("");
+      return;
+    }
+    const a = addresses.find((x) => x.id === id);
+    if (!a) return;
+    setCep(a.cep);
+    setDeliveryInfo({
+      cep: a.cep,
+      street: a.street,
+      neighborhood: a.neighborhood || "",
+      city: a.city,
+      state: "MS",
+      deliveryFee: 10,
+    });
+    setHouseNumber(a.house_number);
+    setComplement(a.complement || "");
+    setOutOfRange(false);
+  };
+
+  const handleDeleteAddress = async (e: { stopPropagation: () => void }, id: string) => {
+    e.stopPropagation();
+    if (!confirm("Excluir este endereço salvo?")) return;
+    await deleteAddress(id);
+    if (selectedAddressId === id) selectSavedAddress("new");
+  };
 
   const [cepError, setCepError] = useState("");
 
@@ -417,6 +484,61 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                     className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
+
+                {/* Saved addresses picker */}
+                {addresses.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-foreground">
+                      <MapPin className="w-4 h-4 inline mr-1" />
+                      Endereços salvos
+                    </label>
+                    <div className="space-y-2">
+                      {addresses.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => selectSavedAddress(a.id)}
+                          className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-start justify-between gap-2 ${
+                            selectedAddressId === a.id
+                              ? "border-primary bg-primary/10"
+                              : "border-border bg-muted hover:border-primary/40"
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-foreground text-sm truncate">
+                              {a.label || `${a.street}, ${a.house_number}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {a.street}, {a.house_number}
+                              {a.complement ? ` (${a.complement})` : ""} — {a.neighborhood || ""}
+                            </p>
+                            <p className="text-xs text-muted-foreground">CEP {a.cep}</p>
+                          </div>
+                          <span
+                            onClick={(e) => handleDeleteAddress(e, a.id)}
+                            className="shrink-0 p-1 rounded-md hover:bg-destructive/10 text-destructive cursor-pointer"
+                            aria-label="Excluir endereço"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </span>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => selectSavedAddress("new")}
+                        className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
+                          selectedAddressId === "new"
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-muted hover:border-primary/40"
+                        }`}
+                      >
+                        <Plus className="w-4 h-4 text-primary" />
+                        <span className="font-bold text-foreground text-sm">Usar outro endereço</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-bold text-foreground mb-1">
                     <MapPin className="w-4 h-4 inline mr-1" />
