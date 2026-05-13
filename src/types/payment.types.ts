@@ -17,6 +17,7 @@ export interface CreatePixPaymentRequest {
 
 export interface CreatePixPaymentResponse {
   order_id: string;
+  daily_order_number: number | null;
   payment_id: string;
   mercadopago_payment_id: number;
   qr_code: string | null;
