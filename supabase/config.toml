@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.delete-order]
 verify_jwt = false
+
+[functions.list-orders]
+verify_jwt = false
