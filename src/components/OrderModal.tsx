@@ -110,7 +110,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     setOutOfRange(false);
   };
 
-  const handleDeleteAddress = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteAddress = async (e: { stopPropagation: () => void }, id: string) => {
     e.stopPropagation();
     if (!confirm("Excluir este endereço salvo?")) return;
     await deleteAddress(id);
