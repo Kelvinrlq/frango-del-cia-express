@@ -233,6 +233,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         order_id: order.id,
+        daily_order_number: order.daily_order_number ?? null,
         payment_id: payment?.id,
         mercadopago_payment_id: mpData.id,
         qr_code: qrCodeString,
