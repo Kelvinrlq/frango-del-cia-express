@@ -14,6 +14,7 @@ interface CreateOrderRequest {
 
 interface CreateOrderResponse {
   order_id: string;
+  daily_order_number: number | null;
   total_amount: number;
   delivery_fee: number;
 }
