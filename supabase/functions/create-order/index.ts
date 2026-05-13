@@ -182,6 +182,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         order_id: order.id,
+        daily_order_number: order.daily_order_number ?? null,
         total_amount: serverTotal,
         delivery_fee: serverDeliveryFee,
       }),

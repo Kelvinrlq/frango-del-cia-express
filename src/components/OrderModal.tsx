@@ -195,18 +195,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     }
   };
 
-  const fetchDailyNumber = async (orderId: string) => {
-    try {
-      const { data } = await supabase
-        .from("orders")
-        .select("daily_order_number")
-        .eq("id", orderId)
-        .single();
-      if (data?.daily_order_number) setSentDailyNumber(data.daily_order_number);
-    } catch (err) {
-      console.error("Erro ao buscar número do pedido:", err);
-    }
-  };
+  // (daily_order_number agora vem na resposta do edge function — não há leitura direta do banco)
 
   const [sendLoading, setSendLoading] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -231,7 +220,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           quantity: i.quantity,
           unitPrice: i.unitPrice,
         })),
-        order_type: "delivery",
+        order_type: "delivery" as const,
         delivery_info: {
           street: deliveryInfo.street,
           houseNumber,
@@ -298,7 +287,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       prepareWhatsAppAndNotifyGroup(orderData.order_id);
       setSentOrderId(orderData.order_id);
       setSentOrderTotal(total);
-      fetchDailyNumber(orderData.order_id);
+      if (orderData.daily_order_number != null) setSentDailyNumber(orderData.daily_order_number);
       setSendLoading(false);
       setStep("sent");
       clearCart();
@@ -310,7 +299,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       prepareWhatsAppAndNotifyGroup(pixData.order_id);
       setSentOrderId(pixData.order_id);
       setSentOrderTotal(pixData.amount ?? total);
-      fetchDailyNumber(pixData.order_id);
+      if (pixData.daily_order_number != null) setSentDailyNumber(pixData.daily_order_number);
     }
     setStep("sent");
     clearCart();
