@@ -15,7 +15,7 @@ import PixPaymentDisplay from "@/components/PixPaymentDisplay";
 import PaymentStatus from "@/components/PaymentStatus";
 import { X, MapPin, User, AlertCircle, Loader2, Trash2, Plus } from "lucide-react";
 import type { CreatePixPaymentResponse } from "@/types/payment.types";
-import type { CustomerAddress } from "@/services/profileService";
+
 
 const ESTABLISHMENT_PHONE = "556793277165";
 const ESTABLISHMENT_EMAIL = "kelvintrp538@gmail.com";
