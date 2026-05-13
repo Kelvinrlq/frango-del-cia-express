@@ -231,7 +231,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           quantity: i.quantity,
           unitPrice: i.unitPrice,
         })),
-        order_type: "delivery",
+        order_type: "delivery" as const,
         delivery_info: {
           street: deliveryInfo.street,
           houseNumber,
