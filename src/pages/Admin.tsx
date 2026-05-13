@@ -115,25 +115,16 @@ export default function Admin() {
     setLoading(true);
     setError(null);
     try {
-      let query = supabase
-        .from("orders")
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .select("*" as any)
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const { data, error: err } = await supabase.functions.invoke("list-orders", {
+        body: { filter_today: filterToday },
+        headers: { "x-admin-password": ADMIN_PASSWORD },
+      });
 
-      if (filterToday) {
-        const today = new Date().toISOString().slice(0, 10);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        query = (query as any).eq("order_date", today);
-      }
-
-      const { data, error: err } = await query;
       if (err) {
         setError(err.message);
         setOrders([]);
       } else {
-        setOrders((data ?? []) as unknown as OrderRow[]);
+        setOrders(((data?.orders ?? []) as unknown) as OrderRow[]);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro desconhecido");
@@ -146,18 +137,9 @@ export default function Admin() {
     if (!authed) return;
     fetchOrders();
 
-    const channel = supabase
-      .channel("admin-orders")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        () => fetchOrders()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Polling a cada 10s (substitui o realtime, que expunha PII publicamente)
+    const interval = setInterval(fetchOrders, 10000);
+    return () => clearInterval(interval);
   }, [authed, fetchOrders]);
 
   const handleLogin = (e: React.FormEvent) => {
