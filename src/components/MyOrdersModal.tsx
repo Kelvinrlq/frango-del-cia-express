@@ -26,7 +26,7 @@ export default function MyOrdersModal({ onClose }: { onClose: () => void }) {
     if (!profile) return;
     listCustomerOrders(profile.phone).then(({ data, error: err }) => {
       if (err) setError(err);
-      else setOrders(data?.orders || []);
+      else setOrders((data?.orders || []).slice(0, 1));
       setLoading(false);
     });
   }, [profile]);
