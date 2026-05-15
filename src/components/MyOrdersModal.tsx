@@ -37,7 +37,7 @@ export default function MyOrdersModal({ onClose }: { onClose: () => void }) {
       <div className="fixed inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center z-50">
         <div className="bg-card rounded-t-3xl md:rounded-2xl w-full md:max-w-lg shadow-2xl flex flex-col max-h-[92vh] animate-fade-in overflow-hidden">
           <div className="gradient-hero p-5 flex items-center justify-between shrink-0">
-            <h2 className="font-display text-2xl text-secondary">📜 Meus pedidos</h2>
+            <h2 className="font-display text-2xl text-secondary">📜 Último pedido</h2>
             <button onClick={onClose} className="w-9 h-9 bg-secondary/10 rounded-full flex items-center justify-center">
               <X className="w-5 h-5 text-secondary" />
             </button>
