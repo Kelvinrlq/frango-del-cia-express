@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       totalQuantity
     });
 
-    // Calculate delivery fee server-side (FIXED: R$ 10 for Corumbá and Ladário)
+    // Calculate delivery fee server-side (Corumbá: R$10, Ladário: R$14)
     let serverDeliveryFee = 0;
     if (order_type === "delivery") {
       if (!delivery_info?.street || !delivery_info?.houseNumber || !delivery_info?.city) {
@@ -111,8 +111,10 @@ Deno.serve(async (req) => {
       }
 
       const cityNorm = delivery_info.city.toLowerCase().trim();
-      if (cityNorm === "corumbá" || cityNorm === "corumba" || cityNorm === "ladário" || cityNorm === "ladario") {
+      if (cityNorm === "corumbá" || cityNorm === "corumba") {
         serverDeliveryFee = 10;
+      } else if (cityNorm === "ladário" || cityNorm === "ladario") {
+        serverDeliveryFee = 14;
       } else {
         return new Response(
           JSON.stringify({ error: "Entrega disponível apenas em Corumbá e Ladário" }),
