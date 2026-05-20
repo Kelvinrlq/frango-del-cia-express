@@ -39,6 +39,12 @@ const formatPhone = (digits: string) =>
     .replace(/(\d{2})(\d)/, "($1) $2")
     .replace(/(\d{5})(\d)/, "$1-$2");
 
+const feeForCity = (city?: string): number => {
+  const c = (city || "").toLowerCase().trim();
+  if (c === "ladário" || c === "ladario") return 14;
+  return 10; // Corumbá (default)
+};
+
 export default function OrderModal({ onClose }: OrderModalProps) {
   const { items, clearCart } = useCart();
   const { profile, addresses, deleteAddress } = useProfile();
@@ -64,7 +70,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           neighborhood: defaultAddress.neighborhood || "",
           city: defaultAddress.city,
           state: "MS",
-          deliveryFee: 10,
+          deliveryFee: feeForCity(defaultAddress.city),
         }
       : {}
   );
@@ -103,7 +109,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       neighborhood: a.neighborhood || "",
       city: a.city,
       state: "MS",
-      deliveryFee: 10,
+      deliveryFee: feeForCity(a.city),
     });
     setHouseNumber(a.house_number);
     setComplement(a.complement || "");
@@ -157,7 +163,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
             neighborhood: "",
             city: data.localidade || "Corumbá",
             state: "MS",
-            deliveryFee: 10,
+            deliveryFee: feeForCity(data.localidade || "Corumbá"),
           });
           setCepError(data?.error || "Não foi possível buscar o CEP, preencha manualmente.");
         } else {
@@ -167,7 +173,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
             neighborhood: data.bairro || "",
             city: data.localidade || "Corumbá",
             state: "MS",
-            deliveryFee: 10,
+            deliveryFee: feeForCity(data.localidade || "Corumbá"),
           });
         }
       } catch {
@@ -177,7 +183,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           neighborhood: "",
           city: "Corumbá",
           state: "MS",
-          deliveryFee: 10,
+          deliveryFee: feeForCity("Corumbá"),
         });
         setCepError("Erro ao buscar CEP, preencha manualmente.");
       } finally {

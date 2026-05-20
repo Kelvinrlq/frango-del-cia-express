@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calculate delivery fee server-side (fixed for Corumbá-MS)
+    // Calculate delivery fee server-side (Corumbá: R$10, Ladário: R$14)
     let serverDeliveryFee = 0;
     if (order_type === "delivery") {
       if (!delivery_info?.street || !delivery_info?.houseNumber || !delivery_info?.city) {
@@ -91,15 +91,18 @@ Deno.serve(async (req) => {
       }
 
       const cityNorm = String(delivery_info.city).toLowerCase().trim();
-      if (cityNorm !== "corumbá" && cityNorm !== "corumba" && cityNorm !== "ladário" && cityNorm !== "ladario") {
+      if (cityNorm === "corumbá" || cityNorm === "corumba") {
+        serverDeliveryFee = 10;
+      } else if (cityNorm === "ladário" || cityNorm === "ladario") {
+        serverDeliveryFee = 14;
+      } else {
         return new Response(
           JSON.stringify({ error: "Entrega disponível apenas em Corumbá e Ladário" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      serverDeliveryFee = FIXED_DELIVERY_FEE;
-      console.log(`Server delivery fee (fixed): R$${serverDeliveryFee}`);
+      console.log(`Server delivery fee for ${cityNorm}: R$${serverDeliveryFee}`);
     }
 
     const serverTotal = FRANGO_PRICE * totalQuantity + serverDeliveryFee;
