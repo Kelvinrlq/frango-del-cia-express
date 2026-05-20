@@ -39,6 +39,12 @@ const formatPhone = (digits: string) =>
     .replace(/(\d{2})(\d)/, "($1) $2")
     .replace(/(\d{5})(\d)/, "$1-$2");
 
+const feeForCity = (city?: string): number => {
+  const c = (city || "").toLowerCase().trim();
+  if (c === "ladário" || c === "ladario") return 14;
+  return 10; // Corumbá (default)
+};
+
 export default function OrderModal({ onClose }: OrderModalProps) {
   const { items, clearCart } = useCart();
   const { profile, addresses, deleteAddress } = useProfile();
