@@ -163,7 +163,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
             neighborhood: "",
             city: data.localidade || "Corumbá",
             state: "MS",
-            deliveryFee: 10,
+            deliveryFee: feeForCity(data.localidade || "Corumbá"),
           });
           setCepError(data?.error || "Não foi possível buscar o CEP, preencha manualmente.");
         } else {
@@ -173,7 +173,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
             neighborhood: data.bairro || "",
             city: data.localidade || "Corumbá",
             state: "MS",
-            deliveryFee: 10,
+            deliveryFee: feeForCity(data.localidade || "Corumbá"),
           });
         }
       } catch {
@@ -183,7 +183,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           neighborhood: "",
           city: "Corumbá",
           state: "MS",
-          deliveryFee: 10,
+          deliveryFee: feeForCity("Corumbá"),
         });
         setCepError("Erro ao buscar CEP, preencha manualmente.");
       } finally {
