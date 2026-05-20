@@ -109,7 +109,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
       neighborhood: a.neighborhood || "",
       city: a.city,
       state: "MS",
-      deliveryFee: 10,
+      deliveryFee: feeForCity(a.city),
     });
     setHouseNumber(a.house_number);
     setComplement(a.complement || "");
