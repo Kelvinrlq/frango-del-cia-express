@@ -70,7 +70,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           neighborhood: defaultAddress.neighborhood || "",
           city: defaultAddress.city,
           state: "MS",
-          deliveryFee: 10,
+          deliveryFee: feeForCity(defaultAddress.city),
         }
       : {}
   );
