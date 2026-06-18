@@ -357,6 +357,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           city: deliveryInfo.city,
           state: deliveryInfo.state || "MS",
           cep,
+          ...(payment === "dinheiro"
+            ? {
+                needs_change: needsChange === true,
+                change_for: needsChange === true ? parsedChangeFor : null,
+              }
+            : {}),
         },
       });
 
