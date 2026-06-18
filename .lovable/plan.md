@@ -1,84 +1,32 @@
-## Plano: Perfis de cliente com login rápido por telefone
+## Objetivo
 
-### Visão geral do fluxo
-1. **Primeira visita** — modal "Bem-vindo!" pede apenas **Nome** e **Telefone**. Cria o perfil e salva o telefone no `localStorage` do navegador (`cfa21:active_phone`).
-2. **Próximas visitas (mesmo navegador)** — o site lê o telefone do `localStorage` automaticamente, busca o perfil e já entra logado. **Não aparece nenhum modal pedindo cadastro de novo.** A pessoa só vê "Olá, {nome}" no topo.
-3. **Pedido** — formulários pré-preenchidos com nome, telefone, último tipo de pedido (entrega/retirada) e última forma de pagamento. Endereços salvos aparecem como cards selecionáveis. Tudo é editável.
-4. **Após pedido** — endereço novo é salvo automaticamente; preferências (tipo + pagamento) são atualizadas no perfil.
-5. **Trocar/sair** — botão "Sou outra pessoa" no header limpa o `localStorage` e reabre o modal de boas-vindas.
+No resumo do pedido (tela "Finalizar Pedido"), quando a forma de pagamento for **Dinheiro**, perguntar se o cliente precisa de troco e, em caso afirmativo, para quanto. Só permitir enviar o pedido após essa escolha.
 
-> ⚠️ Segurança: login só pelo telefone, sem senha. Quem tiver acesso ao navegador da pessoa entra direto na conta dela. Adequado para o público idoso, mas vale lembrar.
+## Mudanças
 
----
+### 1. `src/components/OrderModal.tsx` (frontend)
+- Novos estados: `needsChange: boolean | null` e `changeFor: string` (valor em reais digitado pelo cliente).
+- Resetar esses estados quando a forma de pagamento mudar para algo diferente de "dinheiro".
+- Dentro do bloco do resumo (step `confirm`), logo após o card de Entrega/Pagamento e **somente quando `payment === "dinheiro"`**, renderizar um novo card "Troco" com:
+  - Pergunta "Precisa de troco?" e dois botões grandes (estilo já usado no projeto): **Sim** / **Não**.
+  - Se "Sim" selecionado: input numérico "Troco para quanto?" com máscara em R$, validando que o valor seja **maior que o total do pedido**.
+- Botão "Enviar Pedido" desabilitado enquanto:
+  - `payment === "dinheiro"` e `needsChange === null`, ou
+  - `needsChange === true` e `changeFor` inválido (vazio, não numérico ou ≤ total).
+- Ao enviar, incluir nos dados do pedido:
+  - `change_for`: número (valor da nota) quando precisa de troco
+  - `change_amount`: `change_for - total` (calculado no submit, apenas para exibição/uso pela cozinha)
+  - quando "Não": enviar `change_for: null` / flag "sem troco"
 
-### O que será criado/alterado
+### 2. Mensagem do WhatsApp (backend)
+- Em `supabase/functions/create-order/index.ts`, na montagem da mensagem do pedido em dinheiro, acrescentar uma linha:
+  - "Troco para R$ X,XX (levar R$ Y,YY de troco)" — quando precisa de troco
+  - "Não precisa de troco" — caso contrário
+- Aceitar os novos campos `change_for` / `needs_change` no payload da função e validá-los no servidor (se dinheiro + needs_change=true, exigir change_for > total).
 
-#### 1. Banco de dados (nova migração)
+### 3. Persistência
+- Salvar `needs_change` (boolean) e `change_for` (numeric, nullable) na tabela `orders` via migração, para histórico do pedido.
 
-- **`customer_profiles`**: `phone` (único), `name`, `last_order_type`, `last_payment_method`, `last_email`, `last_cpf`, timestamps.
-- **`customer_addresses`**: `profile_id` (FK), `label` ("Casa", "Trabalho"…), `cep`, `street`, `house_number`, `neighborhood`, `complement`, `city`, `is_default`, timestamps.
-
-RLS ativo, acesso só via Edge Functions com `service_role`.
-
-#### 2. Edge Functions novas
-
-- **`get-or-create-profile`** — `{ phone, name? }` → retorna perfil + endereços. Cria se não existir e vier nome.
-- **`update-profile`** — atualiza nome e/ou telefone do perfil. Se trocar telefone, valida unicidade.
-- **`upsert-address`** / **`delete-address`** — gerencia endereços salvos.
-- **`list-customer-orders`** — recebe telefone, retorna histórico de pedidos daquele cliente (com itens, total, status, data).
-- Atualizar **`create-order`** e **`create-pix-payment`** para, ao final, gravar `last_order_type` + `last_payment_method` no perfil e salvar o endereço usado (se for novo).
-
-#### 3. Frontend
-
-- **`src/context/ProfileContext.tsx`** (novo)
-  - Ao montar: lê `cfa21:active_phone` do `localStorage`. Se existir, chama `get-or-create-profile` e popula contexto. Sem modal.
-  - Se não existir, expõe `needsOnboarding = true`.
-  - Métodos: `login(phone, name)`, `logout()`, `updateProfile()`, `addAddress()`, `removeAddress()`, `refresh()`.
-
-- **`src/components/WelcomeModal.tsx`** (novo) — só aparece quando `needsOnboarding`. Pede nome + telefone com máscara. Botão grande "Começar".
-
-- **`src/components/Header.tsx`** — quando logado, mostra "Olá, {nome}" + menu suspenso com:
-  - 📜 **Meus pedidos** → abre `MyOrdersModal`
-  - ✏️ **Editar meus dados** → abre `EditProfileModal`
-  - 🚪 **Sou outra pessoa** → `logout()`
-
-- **`src/components/MyOrdersModal.tsx`** (novo) — lista pedidos do cliente (via `list-customer-orders`), com data, número do dia, itens, total, status traduzido.
-
-- **`src/components/EditProfileModal.tsx`** (novo) — edita nome e telefone. Se mudar o telefone, atualiza o `localStorage` e o backend.
-
-- **`src/components/OrderModal.tsx`**:
-  - Pré-preenche nome/telefone do perfil.
-  - Pré-seleciona último tipo de pedido e forma de pagamento.
-  - Em entrega: lista endereços salvos como cards (rótulo + rua/número), com "Editar"/"Excluir" + opção "Usar outro endereço".
-  - Após criar pedido novo manualmente, salva o endereço no perfil automaticamente (sem perguntar).
-
-- **`src/services/profileService.ts`** (novo) — wrappers das edge functions.
-
-- **`src/pages/Index.tsx`** — envolve com `<ProfileProvider>` e renderiza `<WelcomeModal>`.
-
-#### 4. Memória do projeto
-Adicionar `mem://features/perfis-cliente` documentando: telefone como ID, persistência em `localStorage`, sem senha, múltiplos endereços, histórico via telefone.
-
----
-
-### Resumo dos arquivos
-
-| Arquivo | Mudança |
-|---|---|
-| `supabase/migrations/...sql` | Tabelas `customer_profiles` + `customer_addresses` com RLS |
-| `supabase/functions/get-or-create-profile/` | Nova |
-| `supabase/functions/update-profile/` | Nova |
-| `supabase/functions/upsert-address/` | Nova |
-| `supabase/functions/delete-address/` | Nova |
-| `supabase/functions/list-customer-orders/` | Nova |
-| `supabase/functions/create-order/index.ts` | Salva prefs + endereço |
-| `supabase/functions/create-pix-payment/index.ts` | Idem |
-| `supabase/config.toml` | Registrar novas funções |
-| `src/context/ProfileContext.tsx` | Novo, com auto-login via `localStorage` |
-| `src/components/WelcomeModal.tsx` | Novo |
-| `src/components/MyOrdersModal.tsx` | Novo |
-| `src/components/EditProfileModal.tsx` | Novo |
-| `src/components/Header.tsx` | Saudação + menu (Meus pedidos / Editar / Sair) |
-| `src/components/OrderModal.tsx` | Pré-preenchimento + lista de endereços salvos |
-| `src/services/profileService.ts` | Novo |
-| `src/pages/Index.tsx` | Envolve com `ProfileProvider` |
+## Fora de escopo
+- Mapa/pin de localização (adiado conforme pedido).
+- Mudanças em outras formas de pagamento (PIX, débito, crédito permanecem iguais).

@@ -59,6 +59,8 @@ Deno.serve(async (req) => {
       state?: string;
       cep?: string;
       deliveryFee?: number;
+      needs_change?: boolean;
+      change_for?: number | null;
     } | null;
 
     const itemLines = items
@@ -108,6 +110,15 @@ Deno.serve(async (req) => {
     msg += `\n💳 *Pagamento:* ${PAYMENT_LABELS[paymentMethod] || paymentMethod}\n`;
     msg += `💰 *Total: ${formatCurrency(order.total_amount)}*\n`;
 
+    if (paymentMethod === "dinheiro") {
+      if (deliveryInfo?.needs_change && typeof deliveryInfo?.change_for === "number") {
+        const trocoLevar = deliveryInfo.change_for - Number(order.total_amount);
+        msg += `💵 *Troco para:* ${formatCurrency(deliveryInfo.change_for)} (levar ${formatCurrency(trocoLevar)} de troco)\n`;
+      } else {
+        msg += `💵 *Troco:* Não precisa\n`;
+      }
+    }
+
     if (paymentMethod === "pix") {
       msg += `\n✅ *Pagamento PIX já confirmado!*`;
     }
@@ -137,6 +148,14 @@ Deno.serve(async (req) => {
       if (googleMapsLink) tmsg += `🗺️ <a href="${googleMapsLink}">📍 Ver no Google Maps</a>\n`;
       tmsg += `\n💰 <b>Total:</b> ${formatCurrency(order.total_amount)}`;
       tmsg += `\n💳 <b>Pagamento:</b> ${PAYMENT_LABELS[paymentMethod] || paymentMethod}`;
+      if (paymentMethod === "dinheiro") {
+        if (deliveryInfo?.needs_change && typeof deliveryInfo?.change_for === "number") {
+          const trocoLevar = deliveryInfo.change_for - Number(order.total_amount);
+          tmsg += `\n💵 <b>Troco para:</b> ${formatCurrency(deliveryInfo.change_for)} (levar ${formatCurrency(trocoLevar)})`;
+        } else {
+          tmsg += `\n💵 <b>Troco:</b> Não precisa`;
+        }
+      }
       deliveryTelegramMessage = tmsg;
     }
 

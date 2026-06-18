@@ -130,6 +130,15 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
 
+  // Troco (dinheiro)
+  const [needsChange, setNeedsChange] = useState<boolean | null>(null);
+  const [changeFor, setChangeFor] = useState<string>("");
+
+  const parsedChangeFor = (() => {
+    const n = Number((changeFor || "").replace(",", "."));
+    return Number.isFinite(n) ? n : NaN;
+  })();
+
   // Sent screen state
   const [sentOrderId, setSentOrderId] = useState<string | null>(null);
   const [sentOrderTotal, setSentOrderTotal] = useState<number>(0);
@@ -348,6 +357,12 @@ export default function OrderModal({ onClose }: OrderModalProps) {
           city: deliveryInfo.city,
           state: deliveryInfo.state || "MS",
           cep,
+          ...(payment === "dinheiro"
+            ? {
+                needs_change: needsChange === true,
+                change_for: needsChange === true ? parsedChangeFor : null,
+              }
+            : {}),
         },
       });
 
@@ -426,7 +441,13 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                     {availablePayments.map((p) => (
                       <button
                         key={p}
-                        onClick={() => setPayment(p)}
+                        onClick={() => {
+                          setPayment(p);
+                          if (p !== "dinheiro") {
+                            setNeedsChange(null);
+                            setChangeFor("");
+                          }
+                        }}
                         className={`p-4 rounded-xl border-2 text-sm font-bold transition-all ${
                           payment === p
                             ? "border-primary bg-primary/10 text-foreground"
@@ -726,6 +747,62 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   <span className="font-display text-3xl text-primary">{formatCurrency(total)}</span>
                 </div>
 
+                {payment === "dinheiro" && (
+                  <div className="bg-muted rounded-xl p-4 space-y-3">
+                    <h3 className="font-display text-lg text-foreground">💵 Troco</h3>
+                    <p className="text-sm font-semibold text-foreground">Precisa de troco?</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { setNeedsChange(false); setChangeFor(""); }}
+                        className={`p-3 rounded-xl border-2 text-base font-bold transition-all ${
+                          needsChange === false
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        Não
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNeedsChange(true)}
+                        className={`p-3 rounded-xl border-2 text-base font-bold transition-all ${
+                          needsChange === true
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        Sim
+                      </button>
+                    </div>
+                    {needsChange === true && (
+                      <div>
+                        <label className="block text-sm font-bold text-foreground mb-1">
+                          Troco para quantos reais? *
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={changeFor}
+                          onChange={(e) => setChangeFor(e.target.value.replace(/[^\d.,]/g, ""))}
+                          placeholder={`Ex.: ${Math.ceil(total / 10) * 10}`}
+                          className="w-full border border-border rounded-xl px-4 py-3 text-foreground bg-background font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                        {changeFor && (!Number.isFinite(parsedChangeFor) || parsedChangeFor <= total) && (
+                          <p className="text-xs text-destructive mt-1">
+                            O valor deve ser maior que o total ({formatCurrency(total)}).
+                          </p>
+                        )}
+                        {Number.isFinite(parsedChangeFor) && parsedChangeFor > total && (
+                          <p className="text-xs text-primary font-semibold mt-1">
+                            Troco a levar: {formatCurrency(parsedChangeFor - total)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {payment === "pix" && (
                   <div className="bg-muted border border-border rounded-xl p-3 text-sm font-semibold text-foreground">
                     📲 Ao confirmar, será gerado um QR Code PIX para pagamento imediato.
@@ -747,7 +824,14 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </button>
                   <button
                     onClick={handleSend}
-                    disabled={pixLoading || sendLoading}
+                    disabled={
+                      pixLoading ||
+                      sendLoading ||
+                      (payment === "dinheiro" && needsChange === null) ||
+                      (payment === "dinheiro" &&
+                        needsChange === true &&
+                        (!Number.isFinite(parsedChangeFor) || parsedChangeFor <= total))
+                    }
                     className="flex-1 gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity disabled:opacity-50 disabled:animate-none flex items-center justify-center gap-2 cta-attention"
                   >
                     {pixLoading ? (

@@ -147,9 +147,27 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Validate troco (only for dinheiro)
+    if (payment_method === "dinheiro" && delivery_info?.needs_change === true) {
+      const cf = Number(delivery_info?.change_for);
+      if (!Number.isFinite(cf) || cf <= serverTotal) {
+        return new Response(
+          JSON.stringify({ error: "Valor de troco inválido (deve ser maior que o total)" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const sanitizedDeliveryInfo = delivery_info ? {
       ...delivery_info,
       deliveryFee: serverDeliveryFee,
+      ...(payment_method === "dinheiro"
+        ? {
+            needs_change: delivery_info?.needs_change === true,
+            change_for:
+              delivery_info?.needs_change === true ? Number(delivery_info?.change_for) : null,
+          }
+        : { needs_change: undefined, change_for: undefined }),
     } : null;
 
     const paymentStatus = payment_method === "dinheiro" ? "pending_dinheiro"
