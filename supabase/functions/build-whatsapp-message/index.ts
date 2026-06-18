@@ -59,6 +59,8 @@ Deno.serve(async (req) => {
       state?: string;
       cep?: string;
       deliveryFee?: number;
+      needs_change?: boolean;
+      change_for?: number | null;
     } | null;
 
     const itemLines = items
