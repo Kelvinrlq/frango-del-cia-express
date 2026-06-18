@@ -148,6 +148,14 @@ Deno.serve(async (req) => {
       if (googleMapsLink) tmsg += `🗺️ <a href="${googleMapsLink}">📍 Ver no Google Maps</a>\n`;
       tmsg += `\n💰 <b>Total:</b> ${formatCurrency(order.total_amount)}`;
       tmsg += `\n💳 <b>Pagamento:</b> ${PAYMENT_LABELS[paymentMethod] || paymentMethod}`;
+      if (paymentMethod === "dinheiro") {
+        if (deliveryInfo?.needs_change && typeof deliveryInfo?.change_for === "number") {
+          const trocoLevar = deliveryInfo.change_for - Number(order.total_amount);
+          tmsg += `\n💵 <b>Troco para:</b> ${formatCurrency(deliveryInfo.change_for)} (levar ${formatCurrency(trocoLevar)})`;
+        } else {
+          tmsg += `\n💵 <b>Troco:</b> Não precisa`;
+        }
+      }
       deliveryTelegramMessage = tmsg;
     }
 
