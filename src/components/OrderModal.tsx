@@ -818,7 +818,14 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                   </button>
                   <button
                     onClick={handleSend}
-                    disabled={pixLoading || sendLoading}
+                    disabled={
+                      pixLoading ||
+                      sendLoading ||
+                      (payment === "dinheiro" && needsChange === null) ||
+                      (payment === "dinheiro" &&
+                        needsChange === true &&
+                        (!Number.isFinite(parsedChangeFor) || parsedChangeFor <= total))
+                    }
                     className="flex-1 gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity disabled:opacity-50 disabled:animate-none flex items-center justify-center gap-2 cta-attention"
                   >
                     {pixLoading ? (
