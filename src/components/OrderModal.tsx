@@ -435,7 +435,13 @@ export default function OrderModal({ onClose }: OrderModalProps) {
                     {availablePayments.map((p) => (
                       <button
                         key={p}
-                        onClick={() => setPayment(p)}
+                        onClick={() => {
+                          setPayment(p);
+                          if (p !== "dinheiro") {
+                            setNeedsChange(null);
+                            setChangeFor("");
+                          }
+                        }}
                         className={`p-4 rounded-xl border-2 text-sm font-bold transition-all ${
                           payment === p
                             ? "border-primary bg-primary/10 text-foreground"
