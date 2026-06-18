@@ -110,6 +110,15 @@ Deno.serve(async (req) => {
     msg += `\n💳 *Pagamento:* ${PAYMENT_LABELS[paymentMethod] || paymentMethod}\n`;
     msg += `💰 *Total: ${formatCurrency(order.total_amount)}*\n`;
 
+    if (paymentMethod === "dinheiro") {
+      if (deliveryInfo?.needs_change && typeof deliveryInfo?.change_for === "number") {
+        const trocoLevar = deliveryInfo.change_for - Number(order.total_amount);
+        msg += `💵 *Troco para:* ${formatCurrency(deliveryInfo.change_for)} (levar ${formatCurrency(trocoLevar)} de troco)\n`;
+      } else {
+        msg += `💵 *Troco:* Não precisa\n`;
+      }
+    }
+
     if (paymentMethod === "pix") {
       msg += `\n✅ *Pagamento PIX já confirmado!*`;
     }
