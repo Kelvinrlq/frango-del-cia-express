@@ -130,6 +130,15 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
 
+  // Troco (dinheiro)
+  const [needsChange, setNeedsChange] = useState<boolean | null>(null);
+  const [changeFor, setChangeFor] = useState<string>("");
+
+  const parsedChangeFor = (() => {
+    const n = Number((changeFor || "").replace(",", "."));
+    return Number.isFinite(n) ? n : NaN;
+  })();
+
   // Sent screen state
   const [sentOrderId, setSentOrderId] = useState<string | null>(null);
   const [sentOrderTotal, setSentOrderTotal] = useState<number>(0);
