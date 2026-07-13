@@ -1,26 +1,31 @@
-## Credenciais salvas ✅
+O log confirma que o QR Code novo está sendo gerado diretamente pelo Mercado Pago com a conta antiga:
 
-`MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET` da nova aplicação foram gravados com segurança. As edge functions já leem esses valores em tempo real — não é preciso alterar código.
+- `collector.account_holder_name`: Kelvin Lucas Saucedo Arruda
+- `qr_code`: contém `kelvintrp@gmail.com`
+- `live_mode`: true
 
-## Sobre a chave PIX `1b050e6e-...`
+Isso significa que não é cache do site nem QR antigo. O token que a função está usando ainda pertence à conta antiga, ou o Mercado Pago ainda está roteando essa credencial para a conta antiga.
 
-O Mercado Pago **ignora qualquer chave PIX enviada pela API** e usa automaticamente a chave da conta dona do Access Token. Como o novo token pertence à conta que tem `1b050e6e-7b0f-4378-b8a9-a9eefddd4615` registrada, o próximo QR code virá com essa chave — sem alterações no código.
+Plano de ação:
 
-## Próximo passo: teste real
+1. Reabrir o formulário seguro para substituir somente `MERCADOPAGO_ACCESS_TOKEN`.
+2. Você deve colar o Access Token de produção copiado dentro da conta Mercado Pago correta, na aplicação criada nessa conta.
+3. Depois disso, gerar um pedido totalmente novo; QR Codes já criados nunca mudam.
+4. Conferir novamente os logs do `create-pix-payment` para validar se o `collector.account_holder_name` deixou de ser Kelvin e se o QR não contém mais `kelvintrp@gmail.com`.
 
-1. Abrir o site em outra aba/anônima
-2. Fazer um pedido de teste (combo + Pix)
-3. Ler o "copia e cola" do QR code gerado
-4. Confirmar que:
-   - Não aparece mais `kelvintrp@gmail.com`
-   - Aparece a chave `1b050e6e-7b0f-4378-b8a9-a9eefddd4615` (ou o nome do novo titular)
-5. Pagar via app do Mercado Pago
-6. Confirmar que o pedido muda para "pago" automaticamente (webhook funcionando com a nova assinatura)
+O que provavelmente está acontecendo:
 
-## Se algo falhar
+- Não precisa desativar nada no Mercado Pago Developer, em geral só trocar o Access Token correto resolve.
+- A chave Pix não é escolhida pelo código. O Mercado Pago usa automaticamente a chave Pix da conta dona do Access Token.
+- Se o QR continua com `kelvintrp@gmail.com`, o Access Token salvo ainda é da conta antiga ou foi copiado de uma aplicação criada na conta antiga.
 
-- **QR ainda mostra kelvintrp** → o Access Token colado ainda é da conta antiga. Criar a app dentro da conta nova e refazer.
-- **Pagamento não muda status para "pago"** → assinatura do webhook errada. Copiar novamente a "Assinatura secreta" da aba Webhooks (produção) e me avisar para reabrir o formulário.
-- Vou checar os logs da função `mercadopago-webhook` se precisar diagnosticar.
+Checklist para pegar o token certo:
 
-Me avise o resultado do teste (ou cole o "copia e cola" do QR se quiser que eu confirme a chave antes de pagar).
+1. Sair da conta Kelvin no Mercado Pago/Mercado Livre.
+2. Entrar exatamente na conta nova que possui a chave Pix `1b050e6e-7b0f-4378-b8a9-a9eefddd4615`.
+3. Ir em Desenvolvedores > Suas integrações > Aplicações.
+4. Abrir/criar uma aplicação nessa conta nova.
+5. Copiar a credencial de Produção: `Access Token`.
+6. Substituir `MERCADOPAGO_ACCESS_TOKEN` com esse valor.
+
+Implementação necessária: nenhuma alteração em código, apenas atualizar o segredo e testar novo pedido.
