@@ -1,33 +1,19 @@
-## O que está acontecendo
+## Objetivo
 
-O app não usa Public Key para gerar Pix. A função `create-pix-payment` chama diretamente a API `/v1/payments` do Mercado Pago com o segredo `MERCADOPAGO_ACCESS_TOKEN`.
+Apenas remover o segredo `MERCADOPAGO_ACCESS_TOKEN` (e opcionalmente `MERCADOPAGO_WEBHOOK_SECRET`) para você ver, na prática, o que acontece no fluxo Pix sem token. Nenhuma mudança de código.
 
-Nos logs mais recentes, o próprio Mercado Pago retornou:
+## Ação
 
-- `account_holder_name`: Kelvin Lucas Saucedo Arruda
-- QR Pix contendo `kelvintrp@gmail.com`
-- `collector_id`: `1834715098`
+1. Deletar o segredo `MERCADOPAGO_ACCESS_TOKEN`.
+2. Deletar o segredo `MERCADOPAGO_WEBHOOK_SECRET` (opcional — me confirma se quer tirar esse também).
 
-Isso indica que a API ainda está autenticando como a conta do Kelvin. Ou seja: o token salvo em `MERCADOPAGO_ACCESS_TOKEN` ainda pertence à conta antiga, ou a alteração do segredo ainda não foi refletida na execução usada para criar esse pagamento.
+## Comportamento esperado sem token
 
-## Plano
+- Ao tentar pagar via Pix, a Edge Function `create-pix-payment` vai chamar a API do Mercado Pago com `Authorization: Bearer undefined` → o MP retorna `401 Unauthorized`.
+- A função vai marcar o pedido como `failed` no banco e devolver `500` com `{ error: "Erro ao gerar pagamento PIX" }`.
+- No front, aparece um toast/erro genérico de falha ao gerar Pix. Nenhum QR code é exibido.
+- Dinheiro / débito / crédito continuam funcionando normalmente (não dependem desse token).
 
-1. Confirmar com uma chamada controlada à função `create-pix-payment` se novos pagamentos continuam vindo com `collector_id`/Pix da conta antiga.
-2. Se continuar Kelvin, atualizar novamente somente o segredo `MERCADOPAGO_ACCESS_TOKEN` com o Access Token de produção da conta Mercado Pago correta.
-3. Depois da atualização, criar um novo pedido/teste e conferir nos logs do Mercado Pago se o `collector_id` e a chave Pix mudaram.
-4. Se o QR ainda sair Kelvin mesmo após token correto, verificar se o token foi copiado de uma aplicação criada dentro da conta Kelvin ou se há mais de uma credencial/app no painel do Mercado Pago.
+Depois você me envia os tokens novos e eu ajusto.
 
-## O que você precisa fazer no Mercado Pago
-
-Não precisa desativar nada no Mercado Pago Developer e não precisa Public Key para esse fluxo Pix.
-
-Você precisa pegar o **Access Token de Produção** logado na **conta Mercado Pago dona da chave Pix correta**:
-
-1. Entrar no Mercado Pago Developer com a conta correta.
-2. Ir em suas aplicações/credenciais.
-3. Copiar o `Access Token` de **Produção**, não sandbox.
-4. Substituir o segredo `MERCADOPAGO_ACCESS_TOKEN` no Lovable.
-
-## Observação importante
-
-O QR Pix não permite escolher uma chave manualmente no payload. Quem define a chave/conta recebedora é o Mercado Pago, com base no Access Token usado. Portanto, se aparece `kelvintrp@gmail.com`, o token ainda aponta para essa conta.
+Confirma que posso remover?
