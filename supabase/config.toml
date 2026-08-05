@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.list-customer-orders]
 verify_jwt = false
+
+[functions.set-store-status]
+verify_jwt = false
