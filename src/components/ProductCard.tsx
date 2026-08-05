@@ -3,13 +3,17 @@ import { useCart } from "@/context/CartContext";
 import { Plus, Minus } from "lucide-react";
 import frangoHero from "@/assets/frango-hero.jpg";
 import { formatCurrency } from "@/types/order";
+import { useStoreStatus } from "@/hooks/useStoreStatus";
 
 export default function ProductCard() {
   const { addItem } = useCart();
+  const { isOpen: storeOpen } = useStoreStatus();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
 
   const handleAdd = () => {
+    if (!storeOpen) return;
+
     addItem(qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
