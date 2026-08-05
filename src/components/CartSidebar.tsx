@@ -1,6 +1,7 @@
 import { useCart } from "@/context/CartContext";
 import { ShoppingBag, X, Plus, Minus, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/types/order";
+import { useStoreStatus } from "@/hooks/useStoreStatus";
 
 interface CartSidebarProps {
   onCheckout: () => void;
@@ -8,6 +9,8 @@ interface CartSidebarProps {
 
 export default function CartSidebar({ onCheckout }: CartSidebarProps) {
   const { items, quantity, updateItem, removeItem, clearCart, isCartOpen, closeCart } = useCart();
+  const { isOpen: storeOpen, closedMessage } = useStoreStatus();
+
 
   if (!isCartOpen) return null;
 
