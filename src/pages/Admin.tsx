@@ -177,7 +177,9 @@ export default function Admin() {
 
   useEffect(() => {
     if (!authed) return;
+    fetchStoreStatus();
     fetchOrders();
+
 
     // Polling a cada 10s (substitui o realtime, que expunha PII publicamente)
     const interval = setInterval(fetchOrders, 10000);
