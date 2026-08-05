@@ -110,6 +110,48 @@ export default function Admin() {
   const [error, setError] = useState<string | null>(null);
   const [filterToday, setFilterToday] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [storeOpen, setStoreOpen] = useState(true);
+  const [closedMessage, setClosedMessage] = useState("");
+  const [savingStore, setSavingStore] = useState(false);
+
+  const fetchStoreStatus = useCallback(async () => {
+    const { data } = await supabase
+      .from("store_settings")
+      .select("is_open, closed_message")
+      .limit(1)
+      .maybeSingle();
+    if (data) {
+      setStoreOpen(data.is_open);
+      setClosedMessage(data.closed_message ?? "");
+    }
+  }, []);
+
+  const saveStoreStatus = async (nextOpen: boolean, message: string) => {
+    setSavingStore(true);
+    try {
+      const { error } = await supabase.functions.invoke("set-store-status", {
+        body: { is_open: nextOpen, closed_message: message || null },
+        headers: { "x-admin-password": ADMIN_PASSWORD },
+      });
+      if (error) throw error;
+      setStoreOpen(nextOpen);
+      toast({
+        title: nextOpen ? "Loja aberta ✅" : "Loja fechada 🔒",
+        description: nextOpen
+          ? "Os clientes já podem fazer pedidos."
+          : "Novos pedidos estão bloqueados.",
+      });
+    } catch (e) {
+      toast({
+        title: "Erro ao alterar status",
+        description: e instanceof Error ? e.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingStore(false);
+    }
+  };
+
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
