@@ -303,6 +303,64 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* Controle da loja */}
+        <Card className={storeOpen ? "border-green-500/50" : "border-destructive"}>
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="font-display text-2xl">
+                  {storeOpen ? "Loja ABERTA ✅" : "Loja FECHADA 🔒"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {storeOpen
+                    ? "Os clientes podem comprar normalmente."
+                    : "Clientes não conseguem adicionar ao carrinho nem finalizar pedidos."}
+                </p>
+              </div>
+              {storeOpen ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={savingStore}>
+                      {savingStore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Fechar loja"}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Fechar a loja?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Os clientes não poderão fazer pedidos até você abrir novamente.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold">Recado para os clientes (opcional)</label>
+                      <Input
+                        value={closedMessage}
+                        maxLength={200}
+                        placeholder="Ex.: Voltamos amanhã às 10h"
+                        onChange={(e) => setClosedMessage(e.target.value)}
+                      />
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => saveStoreStatus(false, closedMessage)}>
+                        Fechar loja
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : (
+                <Button disabled={savingStore} onClick={() => saveStoreStatus(true, "")}>
+                  {savingStore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Abrir loja"}
+                </Button>
+              )}
+            </div>
+            {!storeOpen && closedMessage && (
+              <p className="text-sm text-muted-foreground">Recado exibido: “{closedMessage}”</p>
+            )}
+          </CardContent>
+        </Card>
+
+
         {error && (
           <Card className="border-destructive">
             <CardContent className="pt-6">
