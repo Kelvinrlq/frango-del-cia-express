@@ -184,7 +184,7 @@ export default function Admin() {
     // Polling a cada 10s (substitui o realtime, que expunha PII publicamente)
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
-  }, [authed, fetchOrders]);
+  }, [authed, fetchOrders, fetchStoreStatus]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
