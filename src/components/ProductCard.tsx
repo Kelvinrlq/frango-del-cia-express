@@ -78,14 +78,18 @@ export default function ProductCard() {
 
         <button
           onClick={handleAdd}
+          disabled={!storeOpen}
           className={`mt-4 w-full py-5 rounded-xl font-display text-2xl font-black transition-all shadow-button ${
-            added
+            !storeOpen
+              ? "bg-muted text-muted-foreground cursor-not-allowed"
+              : added
               ? "bg-green-500 text-white scale-95"
               : "gradient-hero text-secondary hover:opacity-90 cta-attention"
           }`}
         >
-          {added ? "✓ Adicionado!" : "👉 Adicionar ao Pedido"}
+          {!storeOpen ? "🔒 Fechado no momento" : added ? "✓ Adicionado!" : "👉 Adicionar ao Pedido"}
         </button>
+
       </div>
 
       {/* Payment info */}
