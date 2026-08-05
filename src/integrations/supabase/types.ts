@@ -213,6 +213,30 @@ export type Database = {
           },
         ]
       }
+      store_settings: {
+        Row: {
+          closed_message: string | null
+          created_at: string
+          id: string
+          is_open: boolean
+          updated_at: string
+        }
+        Insert: {
+          closed_message?: string | null
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          updated_at?: string
+        }
+        Update: {
+          closed_message?: string | null
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
