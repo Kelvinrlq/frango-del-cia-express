@@ -110,6 +110,48 @@ export default function Admin() {
   const [error, setError] = useState<string | null>(null);
   const [filterToday, setFilterToday] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [storeOpen, setStoreOpen] = useState(true);
+  const [closedMessage, setClosedMessage] = useState("");
+  const [savingStore, setSavingStore] = useState(false);
+
+  const fetchStoreStatus = useCallback(async () => {
+    const { data } = await supabase
+      .from("store_settings")
+      .select("is_open, closed_message")
+      .limit(1)
+      .maybeSingle();
+    if (data) {
+      setStoreOpen(data.is_open);
+      setClosedMessage(data.closed_message ?? "");
+    }
+  }, []);
+
+  const saveStoreStatus = async (nextOpen: boolean, message: string) => {
+    setSavingStore(true);
+    try {
+      const { error } = await supabase.functions.invoke("set-store-status", {
+        body: { is_open: nextOpen, closed_message: message || null },
+        headers: { "x-admin-password": ADMIN_PASSWORD },
+      });
+      if (error) throw error;
+      setStoreOpen(nextOpen);
+      toast({
+        title: nextOpen ? "Loja aberta ✅" : "Loja fechada 🔒",
+        description: nextOpen
+          ? "Os clientes já podem fazer pedidos."
+          : "Novos pedidos estão bloqueados.",
+      });
+    } catch (e) {
+      toast({
+        title: "Erro ao alterar status",
+        description: e instanceof Error ? e.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingStore(false);
+    }
+  };
+
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -135,12 +177,14 @@ export default function Admin() {
 
   useEffect(() => {
     if (!authed) return;
+    fetchStoreStatus();
     fetchOrders();
+
 
     // Polling a cada 10s (substitui o realtime, que expunha PII publicamente)
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
-  }, [authed, fetchOrders]);
+  }, [authed, fetchOrders, fetchStoreStatus]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,6 +302,64 @@ export default function Admin() {
             </Button>
           </div>
         </div>
+
+        {/* Controle da loja */}
+        <Card className={storeOpen ? "border-green-500/50" : "border-destructive"}>
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="font-display text-2xl">
+                  {storeOpen ? "Loja ABERTA ✅" : "Loja FECHADA 🔒"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {storeOpen
+                    ? "Os clientes podem comprar normalmente."
+                    : "Clientes não conseguem adicionar ao carrinho nem finalizar pedidos."}
+                </p>
+              </div>
+              {storeOpen ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={savingStore}>
+                      {savingStore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Fechar loja"}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Fechar a loja?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Os clientes não poderão fazer pedidos até você abrir novamente.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold">Recado para os clientes (opcional)</label>
+                      <Input
+                        value={closedMessage}
+                        maxLength={200}
+                        placeholder="Ex.: Voltamos amanhã às 10h"
+                        onChange={(e) => setClosedMessage(e.target.value)}
+                      />
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => saveStoreStatus(false, closedMessage)}>
+                        Fechar loja
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : (
+                <Button disabled={savingStore} onClick={() => saveStoreStatus(true, "")}>
+                  {savingStore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Abrir loja"}
+                </Button>
+              )}
+            </div>
+            {!storeOpen && closedMessage && (
+              <p className="text-sm text-muted-foreground">Recado exibido: “{closedMessage}”</p>
+            )}
+          </CardContent>
+        </Card>
+
 
         {error && (
           <Card className="border-destructive">

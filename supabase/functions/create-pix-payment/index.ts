@@ -123,6 +123,23 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Bloqueia pedidos quando a loja está fechada
+    {
+      const { data: store } = await supabase
+        .from("store_settings")
+        .select("is_open, closed_message")
+        .limit(1)
+        .maybeSingle();
+      if (store && store.is_open === false) {
+        return new Response(
+          JSON.stringify({ error: store.closed_message || "Loja fechada no momento. Tente novamente mais tarde." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+
+
     // Store delivery_info with server-calculated fee
     const sanitizedDeliveryInfo = delivery_info ? {
       ...delivery_info,

@@ -147,6 +147,23 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Bloqueia pedidos quando a loja está fechada
+    {
+      const { data: store } = await supabase
+        .from("store_settings")
+        .select("is_open, closed_message")
+        .limit(1)
+        .maybeSingle();
+      if (store && store.is_open === false) {
+        return new Response(
+          JSON.stringify({ error: store.closed_message || "Loja fechada no momento. Tente novamente mais tarde." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+
+
     // Validate troco (only for dinheiro)
     if (payment_method === "dinheiro" && delivery_info?.needs_change === true) {
       const cf = Number(delivery_info?.change_for);

@@ -6,15 +6,28 @@ import OrderModal from "@/components/OrderModal";
 import WelcomeModal from "@/components/WelcomeModal";
 import { CartProvider, useCart } from "@/context/CartContext";
 import { ProfileProvider } from "@/context/ProfileContext";
+import { useStoreStatus } from "@/hooks/useStoreStatus";
 import logo from "@/assets/logo.png";
 
 function HomeContent() {
   const [showOrder, setShowOrder] = useState(false);
   const { openCart } = useCart();
+  const { isOpen: storeOpen, closedMessage } = useStoreStatus();
 
   return (
     <div className="min-h-screen gradient-warm">
       <Header onCartClick={openCart} />
+
+      {!storeOpen && (
+        <div className="bg-destructive text-destructive-foreground px-4 py-4 text-center">
+          <p className="font-display text-2xl font-black">🔒 Estamos fechados no momento</p>
+          <p className="font-semibold text-base mt-1">
+            {closedMessage || "Volte em breve para fazer seu pedido!"}
+          </p>
+        </div>
+      )}
+
+
 
       {/* Hero */}
       <section className="gradient-hero py-10 px-4">
