@@ -103,12 +103,26 @@ export default function CartSidebar({ onCheckout }: CartSidebarProps) {
             <p className="text-xs text-muted-foreground text-center">
               * Taxa de entrega calculada no próximo passo
             </p>
+            {!storeOpen && (
+              <div className="rounded-xl bg-destructive/10 border border-destructive/30 p-3 text-center">
+                <p className="font-bold text-destructive">🔒 Estamos fechados no momento</p>
+                {closedMessage && (
+                  <p className="text-sm text-muted-foreground mt-1">{closedMessage}</p>
+                )}
+              </div>
+            )}
             <button
-              onClick={() => { closeCart(); onCheckout(); }}
-              className="w-full gradient-hero text-secondary font-display text-xl py-4 rounded-xl shadow-button hover:opacity-90 transition-opacity"
+              onClick={() => { if (!storeOpen) return; closeCart(); onCheckout(); }}
+              disabled={!storeOpen}
+              className={`w-full font-display text-xl py-4 rounded-xl shadow-button transition-opacity ${
+                storeOpen
+                  ? "gradient-hero text-secondary hover:opacity-90"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              }`}
             >
-              Finalizar Pedido 🍗
+              {storeOpen ? "Finalizar Pedido 🍗" : "Fechado no momento"}
             </button>
+
             <button
               onClick={clearCart}
               className="w-full text-muted-foreground text-sm hover:text-destructive transition-colors"
