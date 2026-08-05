@@ -1,19 +1,39 @@
-## Objetivo
+# Controle de Loja Aberta/Fechada
 
-Apenas remover o segredo `MERCADOPAGO_ACCESS_TOKEN` (e opcionalmente `MERCADOPAGO_WEBHOOK_SECRET`) para você ver, na prática, o que acontece no fluxo Pix sem token. Nenhuma mudança de código.
+Um botão no Painel Admin liga e desliga as vendas. Com a loja desligada, o cliente não consegue adicionar o frango ao carrinho nem finalizar pedido.
 
-## Ação
+## Como vai funcionar
 
-1. Deletar o segredo `MERCADOPAGO_ACCESS_TOKEN`.
-2. Deletar o segredo `MERCADOPAGO_WEBHOOK_SECRET` (opcional — me confirma se quer tirar esse também).
+**No painel admin**
+- No topo do painel, um cartão de status: "Loja ABERTA ✅" ou "Loja FECHADA 🔒", com um interruptor para alternar.
+- Ao desligar, aparece uma confirmação. Opcionalmente é possível escrever um recado curto (ex.: "Voltamos amanhã às 10h") que aparece para os clientes.
+- A mudança vale na hora para todos os visitantes do site.
 
-## Comportamento esperado sem token
+**Para o cliente**
+- Loja aberta: tudo igual a hoje.
+- Loja fechada:
+  - Faixa em destaque no topo da página: "Estamos fechados no momento" + o recado, se houver.
+  - Botão "Adicionar ao carrinho" desabilitado no card do produto.
+  - Botão de finalizar no carrinho desabilitado, com aviso.
+  - Se o cliente já estiver com o modal aberto quando a loja fechar, o envio é bloqueado com mensagem clara.
 
-- Ao tentar pagar via Pix, a Edge Function `create-pix-payment` vai chamar a API do Mercado Pago com `Authorization: Bearer undefined` → o MP retorna `401 Unauthorized`.
-- A função vai marcar o pedido como `failed` no banco e devolver `500` com `{ error: "Erro ao gerar pagamento PIX" }`.
-- No front, aparece um toast/erro genérico de falha ao gerar Pix. Nenhum QR code é exibido.
-- Dinheiro / débito / crédito continuam funcionando normalmente (não dependem desse token).
+**Proteção no servidor**
+- Mesmo que alguém tente burlar a tela, o pedido é recusado no servidor quando a loja está fechada (vale para dinheiro/cartão e para PIX).
 
-Depois você me envia os tokens novos e eu ajusto.
+## Detalhes técnicos
 
-Confirma que posso remover?
+1. **Banco** — nova tabela `store_settings` (linha única): `id`, `is_open boolean default true`, `closed_message text`, `updated_at`.
+   - `GRANT SELECT` para `anon` e `authenticated` (o status precisa ser lido publicamente), `GRANT ALL` para `service_role`.
+   - RLS habilitado: política de `SELECT` pública; escrita apenas por `service_role`.
+   - Adicionar a tabela à publicação `supabase_realtime` para o status atualizar sem recarregar (apenas o status é público, sem dados pessoais).
+
+2. **Edge Function `set-store-status`** — protegida por `x-admin-password` (mesmo padrão de `list-orders`/`delete-order`), grava `is_open` e `closed_message` via service role. Registrada em `supabase/config.toml`.
+
+3. **Frontend**
+   - Novo hook `src/hooks/useStoreStatus.ts`: lê `store_settings` via cliente Supabase e assina realtime (com cleanup via `removeChannel`).
+   - `ProductCard.tsx`: desabilita o botão de adicionar e mostra o aviso quando fechado.
+   - `CartSidebar.tsx`: desabilita o checkout quando fechado.
+   - `Index.tsx`: faixa de aviso no topo.
+   - `Admin.tsx`: cartão de status com `Switch`, campo de recado e chamada à função `set-store-status`.
+
+4. **Servidor** — `create-order` e `create-pix-payment` consultam `store_settings` antes de criar o pedido e retornam erro 403 ("Loja fechada no momento") quando `is_open = false`.
