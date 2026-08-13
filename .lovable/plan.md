@@ -1,26 +1,28 @@
-# Desativar o pagamento por Pix
+# Ocultar a opção de pagamento por Pix (só no front)
 
-Objetivo: o cliente não vê mais a opção Pix e o sistema não gera mais QR Code nem chave "copia e cola".
+Objetivo: o botão "Pix" some da tela de pagamento, então nenhum cliente consegue gerar QR Code. Todo o resto (edge functions, segredos, componentes) fica intacto para reativar depois com o novo Access Token.
 
 ## O que muda para o cliente
 
 - Na escolha de pagamento aparecem apenas: Dinheiro, Débito e Crédito (na entrega).
-- Nada de tela de QR Code, chave Pix, contagem regressiva ou "aguardando pagamento".
-- O CPF deixa de ser pedido (ele só existia por causa do Pix).
-- Na vitrine do produto, o texto passa de "Pix ou dinheiro" para "Dinheiro, débito ou crédito na entrega".
-- Se alguém tiver um perfil salvo com Pix como forma preferida, o site passa a sugerir Dinheiro.
+- Como Pix não pode mais ser escolhido, nunca aparece a tela de QR Code / chave copia e cola.
+- O CPF só era pedido no Pix, então deixa de aparecer na prática.
+- Se alguém tiver um perfil salvo com Pix como forma preferida, o site sugere Dinheiro.
 
 ## O que continua igual
 
 - Pedidos por Dinheiro, Débito e Crédito seguem normais (inclusive o troco).
-- Envio para Telegram/WhatsApp e o painel admin continuam funcionando.
-- Pedidos antigos pagos por Pix continuam no histórico e no painel, com os rótulos atuais.
+- Telegram/WhatsApp, painel admin e histórico de pedidos seguem iguais.
+- Pedidos antigos pagos por Pix continuam no histórico com os rótulos atuais.
 
 ## Detalhes técnicos
 
-- `src/components/OrderModal.tsx`: remover `"pix"` de `availablePayments`, remover o passo `pix`, o estado `pixData/pixLoading/pixError`, os handlers `handlePixApproved`/`handlePixExpired`, a chamada a `createPixPayment`, o bloco de CPF e os avisos de QR Code. Fallback do perfil passa a `"dinheiro"`.
-- Remover os componentes/serviços que ficam sem uso: `src/components/PixPaymentDisplay.tsx`, `src/components/PaymentStatus.tsx`, `src/services/paymentService.ts`, `src/types/payment.types.ts`.
-- `src/components/ProductCard.tsx`: ajustar os textos que citam Pix.
-- Backend: manter as edge functions `create-pix-payment`, `check-payment-status` e `mercadopago-webhook` no projeto, sem uso pelo front.
-- Remover os segredos `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET`, para que nenhuma cobrança Pix possa ser gerada.
-- `src/pages/Admin.tsx` e `MyOrdersModal`: rótulos de status mantidos (referem-se a pedidos antigos).
+- `src/components/OrderModal.tsx`: remover apenas `"pix"` da lista `availablePayments` (entrega e retirada) e trocar o fallback do perfil de `"pix"` para `"dinheiro"`. Todo o código do fluxo Pix (passo `pix`, `pixData`, `createPixPayment`, bloco de CPF) permanece no arquivo, apenas inalcançável.
+- `src/components/ProductCard.tsx`: ajustar o texto que cita Pix.
+- Nada é apagado: `PixPaymentDisplay.tsx`, `PaymentStatus.tsx`, `paymentService.ts` e `payment.types.ts` ficam como estão.
+- Backend intocado: `create-pix-payment`, `check-payment-status` e `mercadopago-webhook` continuam publicadas.
+- Segredos `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET` permanecem — você troca o Access Token quando quiser reativar.
+
+## Para reativar depois
+
+Basta recolocar `"pix"` em `availablePayments` e atualizar o Access Token / assinatura secreta da nova conta.
