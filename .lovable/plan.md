@@ -21,5 +21,6 @@ Objetivo: o cliente não vê mais a opção Pix e o sistema não gera mais QR Co
 - `src/components/OrderModal.tsx`: remover `"pix"` de `availablePayments`, remover o passo `pix`, o estado `pixData/pixLoading/pixError`, os handlers `handlePixApproved`/`handlePixExpired`, a chamada a `createPixPayment`, o bloco de CPF e os avisos de QR Code. Fallback do perfil passa a `"dinheiro"`.
 - Remover os componentes/serviços que ficam sem uso: `src/components/PixPaymentDisplay.tsx`, `src/components/PaymentStatus.tsx`, `src/services/paymentService.ts`, `src/types/payment.types.ts`.
 - `src/components/ProductCard.tsx`: ajustar os textos que citam Pix.
-- Backend: manter as edge functions `create-pix-payment`, `check-payment-status` e `mercadopago-webhook` no projeto, mas sem uso pelo front. Como os segredos do Mercado Pago já foram removidos, elas não geram cobrança. Se você preferir, também posso excluí-las de vez — me avise.
+- Backend: manter as edge functions `create-pix-payment`, `check-payment-status` e `mercadopago-webhook` no projeto, sem uso pelo front.
+- Remover os segredos `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET`, para que nenhuma cobrança Pix possa ser gerada.
 - `src/pages/Admin.tsx` e `MyOrdersModal`: rótulos de status mantidos (referem-se a pedidos antigos).
