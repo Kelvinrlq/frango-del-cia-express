@@ -21,7 +21,7 @@ Objetivo: o botão "Pix" some da tela de pagamento, então nenhum cliente conseg
 - `src/components/ProductCard.tsx`: ajustar o texto que cita Pix.
 - Nada é apagado: `PixPaymentDisplay.tsx`, `PaymentStatus.tsx`, `paymentService.ts` e `payment.types.ts` ficam como estão.
 - Backend intocado: `create-pix-payment`, `check-payment-status` e `mercadopago-webhook` continuam publicadas.
-- Segredos `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET` permanecem — você troca o Access Token quando quiser reativar.
+- Segredos `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET`: remover agora (você fornece os novos depois).
 
 ## Para reativar depois
 
