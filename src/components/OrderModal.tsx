@@ -49,9 +49,11 @@ export default function OrderModal({ onClose }: OrderModalProps) {
   const { items, clearCart } = useCart();
   const { profile, addresses, deleteAddress } = useProfile();
   const [step, setStep] = useState<Step>("payment");
-  const [payment, setPayment] = useState<PaymentMethod>(
-    (profile?.last_payment_method as PaymentMethod) || "pix"
-  );
+  const [payment, setPayment] = useState<PaymentMethod>(() => {
+    const last = profile?.last_payment_method as PaymentMethod | undefined;
+    return last && last !== "pix" ? last : "dinheiro";
+  });
+
 
   // Saved address selection
   const defaultAddress = addresses.find((a) => a.is_default) || addresses[0];
