@@ -106,10 +106,7 @@ export default function ProductCard() {
           <span>💰 Dinheiro:</span>
           <span className="text-foreground">{formatCurrency(50)}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <span>📲 Pix:</span>
-          <span className="text-foreground">{formatCurrency(50)}</span>
-        </div>
+
       </div>
     </div>
   );
