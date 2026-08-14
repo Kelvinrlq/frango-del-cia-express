@@ -55,7 +55,7 @@ export default function ProductCard() {
         <div>
           <p className="text-muted-foreground text-base font-bold">A partir de</p>
           <p className="font-display text-5xl font-black text-primary leading-none">{formatCurrency(50 * qty)}</p>
-          <p className="text-sm text-muted-foreground font-semibold mt-1">Pix ou dinheiro</p>
+          <p className="text-sm text-muted-foreground font-semibold mt-1">Dinheiro, débito ou crédito na entrega</p>
         </div>
 
         {/* Qty selector - com espaço adequado */}
