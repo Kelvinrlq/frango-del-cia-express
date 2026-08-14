@@ -401,7 +401,7 @@ export default function OrderModal({ onClose }: OrderModalProps) {
     setPixData(null);
   };
 
-  const availablePayments: PaymentMethod[] = ["pix", "dinheiro", "debito", "credito"];
+  const availablePayments: PaymentMethod[] = ["dinheiro", "debito", "credito"];
 
   const stepTitle = () => {
     if (step === "payment") return "Forma de pagamento";
